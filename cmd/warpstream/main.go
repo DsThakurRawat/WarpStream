@@ -209,11 +209,6 @@ func main() {
 				Usage:   "Disable color output",
 				EnvVars: []string{"NO_COLOR"},
 			},
-			&cli.IntFlag{
-				Name:    "nb-worker-threads",
-				Usage:   "Number of worker threads",
-				EnvVars: []string{"TOKIO_WORKER_THREADS"},
-			},
 			&cli.StringFlag{
 				Name:    "log-lvl",
 				Value:   "INFO",
