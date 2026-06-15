@@ -1,8 +1,8 @@
-# Makefile for wstunnel-go
+# Makefile for warpstream
 
 # Variables
 GO_VERSION ?= 1.25
-APP_NAME ?= wstunnel-go
+APP_NAME ?= warpstream
 BIN_DIR ?= ./bin
 GO_BUILD_LDFLAGS ?= -ldflags="-s -w"
 
@@ -53,13 +53,13 @@ verify: ## Run go mod verify
 
 
 .PHONY: build-caddy
-build-caddy: ## Build Caddy with wstunnel-go module
-	@echo "Building Caddy with wstunnel-go module..."
-	cd pkg/caddy && xcaddy build --with github.com/divyansh-rawat/wstunnel-go/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/divyansh-rawat/wstunnel-go=$(CURDIR)
+build-caddy: ## Build Caddy with warpstream module
+	@echo "Building Caddy with warpstream module..."
+	cd pkg/caddy && xcaddy build --with github.com/divyansh-rawat/warpstream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/divyansh-rawat/warpstream=$(CURDIR)
 
 .PHONY: check-caddy
 check-caddy: build-caddy ## Check if Caddy module is correctly registered
-	./pkg/caddy/caddy list-modules | grep wstunnel
+	./pkg/caddy/caddy list-modules | grep warpstream
 
 .PHONY: tag
 tag: ## Create annotated tags (e.g., make tag VERSION=0.0.1)

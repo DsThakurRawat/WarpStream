@@ -1,15 +1,15 @@
 [Unit]
-Description=wstunnel-go client - %I
-Documentation=https://github.com/divyansh-rawat/wstunnel-go
+Description=warpstream client - %I
+Documentation=https://github.com/divyansh-rawat/warpstream
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/wstunnel-go client --config /etc/wstunnel-go/%i.yaml
+ExecStart=/usr/bin/warpstream client --config /etc/warpstream/%i.yaml
 Restart=always
 RestartSec=5
 # Security Hardening
-ReadOnlyPaths=/etc/wstunnel-go
+ReadOnlyPaths=/etc/warpstream
 ProtectSystem=full
 ProtectHome=true
 PrivateTmp=true

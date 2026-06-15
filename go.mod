@@ -1,4 +1,4 @@
-module github.com/divyansh-rawat/wstunnel-go
+module github.com/divyansh-rawat/warpstream
 
 go 1.25.0
 

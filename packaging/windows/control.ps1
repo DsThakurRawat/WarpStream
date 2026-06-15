@@ -5,7 +5,7 @@ param (
     [string]$Action
 )
 
-$TaskName = "wstunnel-go-client"
+$TaskName = "warpstream-client"
 
 switch ($Action) {
     "start" {
