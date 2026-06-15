@@ -237,7 +237,6 @@ warpstream server --tls-certificate cert.pem --tls-private-key key.pem --tls-cli
 -   `--config`: Path to YAML configuration file.
 -   `--log-lvl`: Log verbosity (TRACE, DEBUG, INFO, WARN, ERROR, OFF). Default: INFO.
 -   `--no-color`: Disable color output.
--   `--nb-worker-threads`: Number of worker threads (environment variable: `TOKIO_WORKER_THREADS`).
 
 #### Client Flags
 -   `-L, --local-to-remote`: Define a local-to-remote tunnel.
@@ -333,11 +332,12 @@ func main() {
 
 ### Performance Metrics
 
-| Metric | warpstream |
-| :--- | :---: |
-| Throughput (TCP) | ~ Gbps |
-| Latency Overhead | < 1ms |
-| Memory Usage (Idle) | ~ 20MB |
+Throughput and latency depend on your environment and deployment architecture. Local benchmarks demonstrate minimal protocol overhead. 
+Run the benchmark suite to test performance on your hardware:
+
+```bash
+go test -bench . ./pkg/tunnel/...
+```
 
 ### Compatibility Versions
 
