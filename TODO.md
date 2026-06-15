@@ -9,7 +9,7 @@
    - Define test cases for TCP, UDP, and HTTP tunnels. Validate argument permutations: --port, --host,
    --key, --cert. Ensure coverage for TLS/SSL configurations. Measure success via exit codes and log analysis.
 [x] add mode to go version that would be RFC 6455 compliant, with a note that only go clients will be able to work in that mode.
-   add command line and config option for this mode (keep compatibility wuth rust as a default mode of operation)
+   add command line and config option for this mode (keep compatibility wuth legacy as a default mode of operation)
    **Implementation Details:**
    - **Protocol:** WebSocket (RFC 6455)
    - **Mode:** `ws`
@@ -19,7 +19,7 @@
    - **CLI Flag:** `--mode ws` for strict compliance to rfc6455 and propose good
      value for non-compliant (default) mode.
    - **Config Key:** `mode: ws`
-   - **Default Mode:** `rust`
+   - **Default Mode:** `legacy`
    - **Dependencies:** gorilla/websocket can be used, but only in cases if rfc compliant protocol. in non-complaint mode it should be using own
    implementation.
    - **Go Lib:** `gorilla/websocket`

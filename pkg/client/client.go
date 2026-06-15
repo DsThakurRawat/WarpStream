@@ -54,7 +54,7 @@ type Config struct {
 	DnsResolverPreferIpv4                  bool              `yaml:"dns_resolver_prefer_ipv4"`
 	LocalToRemote                          []string          `yaml:"local_to_remote"`
 	RemoteToLocal                          []string          `yaml:"remote_to_local"`
-	WebsocketProtocol                      string            `yaml:"mode"` // "rust" or "ws"
+	WebsocketProtocol                      string            `yaml:"mode"` // "legacy" or "ws"
 }
 
 type Client struct {
@@ -86,7 +86,7 @@ func (c *Client) generateJWT(requestID string, p protocol.LocalProtocol, remoteH
 	if secret == "" {
 		secret = legacyJWTSecret
 		legacyJWTSecretWarning.Do(func() {
-			slog.Warn("Using legacy default JWT secret for Rust compatibility; configure jwt_secret for secure deployments")
+			slog.Warn("Using legacy default JWT secret for Legacy compatibility; configure jwt_secret for secure deployments")
 		})
 	}
 
