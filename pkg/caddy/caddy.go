@@ -39,9 +39,9 @@ func (Wstunnel) CaddyModule() caddy.ModuleInfo {
 func (w *Wstunnel) Provision(ctx caddy.Context) error {
 	w.log = ctx.Logger()
 
-	// If no mode is specified, default to rust for compatibility
+	// If no mode is specified, default to legacy for compatibility
 	if w.Config.WebsocketProtocol == "" {
-		w.Config.WebsocketProtocol = "rust"
+		w.Config.WebsocketProtocol = "legacy"
 	}
 
 	w.server = server.NewServer(w.Config)
@@ -87,7 +87,7 @@ func (w *Wstunnel) ServeHTTP(rw http.ResponseWriter, r *http.Request, next caddy
 // UnmarshalCaddyfile sets up the handler from Caddyfile tokens.
 //
 //	wstunnel {
-//	    mode ws|rust
+//	    mode ws|legacy
 //	    prefix /v1
 //	    restrict_config /path/to/rules.yaml
 //	    ping_interval 30s

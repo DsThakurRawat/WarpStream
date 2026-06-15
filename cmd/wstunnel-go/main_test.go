@@ -38,7 +38,7 @@ func newTestContext(t *testing.T, args []string) *cli.Context {
 	fs.Bool("dns-resolver-prefer-ipv4", false, "")
 	fs.Var(cli.NewStringSlice(), "local-to-remote", "")
 	fs.Var(cli.NewStringSlice(), "remote-to-local", "")
-	fs.String("mode", "rust", "")
+	fs.String("mode", "legacy", "")
 	fs.Bool("insecure-no-jwt-validation", false, "")
 	fs.Var(cli.NewStringSlice(), "restrict-to", "")
 	fs.Var(cli.NewStringSlice(), "restrict-http-upgrade-path-prefix", "")
@@ -88,7 +88,7 @@ func TestApplyServerFlagOverridesRespectsExplicitBoolOverride(t *testing.T) {
 		WebsocketPingFrequency:  time.Minute,
 	}
 
-	applyServerFlagOverrides(newTestContext(t, []string{"--mode=rust", "--insecure-no-jwt-validation=false"}), cfg, "")
+	applyServerFlagOverrides(newTestContext(t, []string{"--mode=legacy", "--insecure-no-jwt-validation=false"}), cfg, "")
 
 	if cfg.PathPrefix != "cfg-prefix" {
 		t.Fatalf("PathPrefix = %q, want cfg-prefix", cfg.PathPrefix)
@@ -99,8 +99,8 @@ func TestApplyServerFlagOverridesRespectsExplicitBoolOverride(t *testing.T) {
 	if cfg.InsecureNoJWTValidation {
 		t.Fatal("InsecureNoJWTValidation remained true despite explicit false override")
 	}
-	if cfg.WebsocketProtocol != "rust" {
-		t.Fatalf("WebsocketProtocol = %q, want rust", cfg.WebsocketProtocol)
+	if cfg.WebsocketProtocol != "legacy" {
+		t.Fatalf("WebsocketProtocol = %q, want legacy", cfg.WebsocketProtocol)
 	}
 	if cfg.WebsocketPingFrequency != time.Minute {
 		t.Fatalf("WebsocketPingFrequency = %v, want %v", cfg.WebsocketPingFrequency, time.Minute)

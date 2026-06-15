@@ -41,7 +41,7 @@ type Config struct {
 	DnsResolver                    []string      `yaml:"dns_resolver"`
 	DnsResolverPreferIpv4          bool          `yaml:"dns_resolver_prefer_ipv4"`
 	RestrictTo                     []string      `yaml:"restrict_to"`
-	RestrictHttpUpgradePathPrefix  []string      `yaml:"restrict_http_upgrade_path_prefix_list"` // Renamed list to avoid clash? No, Rust uses same name but different structure.
+	RestrictHttpUpgradePathPrefix  []string      `yaml:"restrict_http_upgrade_path_prefix_list"` // Renamed list to avoid clash? No, Legacy uses same name but different structure.
 	RestrictConfig                 string        `yaml:"restrict_config"`
 	TlsCertificate                 string        `yaml:"tls_certificate"`
 	TlsPrivateKey                  string        `yaml:"tls_private_key"`
@@ -50,7 +50,7 @@ type Config struct {
 	HttpProxyLogin                 string        `yaml:"http_proxy_login"`
 	HttpProxyPassword              string        `yaml:"http_proxy_password"`
 	RemoteToLocalServerIdleTimeout time.Duration `yaml:"remote_to_local_server_idle_timeout"`
-	WebsocketProtocol              string        `yaml:"mode"` // "rust" or "ws"
+	WebsocketProtocol              string        `yaml:"mode"` // "legacy" or "ws"
 }
 
 func (c *Config) UnmarshalYAML(unmarshal func(any) error) error {

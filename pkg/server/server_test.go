@@ -118,9 +118,9 @@ func TestParseJWTClaimsRejectsWrongSecret(t *testing.T) {
 	}
 }
 
-func TestParseJWTClaimsRustModeIgnoresVerificationSecret(t *testing.T) {
+func TestParseJWTClaimsLegacyModeIgnoresVerificationSecret(t *testing.T) {
 	srv := NewServer(Config{
-		WebsocketProtocol: "rust",
+		WebsocketProtocol: "legacy",
 		JWTSecret:         "shared-secret",
 	})
 
@@ -161,7 +161,7 @@ func TestParseJWTClaimsCompatibilityModeAcceptsHS256Shape(t *testing.T) {
 
 func TestParseJWTClaimsRejectsUnsupportedAlgorithmWithoutPanicking(t *testing.T) {
 	t.Run("unverified", func(t *testing.T) {
-		srv := NewServer(Config{WebsocketProtocol: "rust"})
+		srv := NewServer(Config{WebsocketProtocol: "legacy"})
 
 		defer func() {
 			if r := recover(); r != nil {

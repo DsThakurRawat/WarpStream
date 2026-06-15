@@ -55,12 +55,12 @@ RFC 6455 Section 5.1 requires that all frames sent from a client to a server mus
 ### Handshake Sequence
 1.  **Client Dial:** Performs a TCP/TLS connection to the server.
 2.  **Handshake:** Sends a `GET` request with `Upgrade: websocket` and the `Sec-WebSocket-Protocol` containing the JWT.
-3.  **Server Upgrade:** In `--mode ws`, validates the JWT when a shared secret is configured and otherwise parses an `HS256`-shaped token for compatibility. In `--mode rust`, it parses an `HS256`-shaped token without signature verification to remain wire-compatible with the Rust implementation, then responds with `HTTP/1.1 101 Switching Protocols`.
-4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `wstunnel::tunnel::transport::io` (Rust) logic.
+3.  **Server Upgrade:** In `--mode ws`, validates the JWT when a shared secret is configured and otherwise parses an `HS256`-shaped token for compatibility. In `--mode legacy`, it parses an `HS256`-shaped token without signature verification to remain wire-compatible with the Legacy implementation, then responds with `HTTP/1.1 101 Switching Protocols`.
+4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `wstunnel::tunnel::transport::io` (Legacy) logic.
 
 ### Security Considerations
 - **JWT Secrets:** The implementation supports a shared secret (`--jwt-secret`) for signing client tunnel requests and for verifying server-side tunnel JWTs in `--mode ws`.
-- **Rust Compatibility:** In `--mode rust`, the server parses `HS256` tunnel JWTs without signature verification so it remains compatible with the original Rust framing behavior.
+- **Legacy Compatibility:** In `--mode legacy`, the server parses `HS256` tunnel JWTs without signature verification so it remains compatible with the original Legacy framing behavior.
 - **Compatibility Mode:** In `--mode ws`, `--insecure-no-jwt-validation` allows `HS256` tunnel JWTs to be parsed without signature verification after validation would otherwise fail.
 
 ### Connection Management
@@ -89,4 +89,4 @@ wstunnel-go server ws://0.0.0.0:8080 --jwt-secret mysecret
 ```
 
 ## Testing
-Interoperability is verified via `tests/tester/main_test.go`, which runs a matrix of Go-Go, Go-Rust, and Rust-Go combinations, ensuring that the custom `pkg/wst` layer correctly handles the non-standard framing expected by the Rust implementation.
+Interoperability is verified via `tests/tester/main_test.go`, which runs a matrix of Go-Go, Go-Legacy, and Legacy-Go combinations, ensuring that the custom `pkg/wst` layer correctly handles the non-standard framing expected by the Legacy implementation.

@@ -296,8 +296,8 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "rust",
-						Usage:   "WebSocket protocol mode (rust, ws)",
+						Value:   "legacy",
+						Usage:   "WebSocket protocol mode (legacy, ws)",
 						EnvVars: []string{"WSTUNNEL_MODE"},
 					},
 					&cli.StringFlag{
@@ -360,8 +360,8 @@ func main() {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "rust",
-						Usage:   "WebSocket protocol mode (rust, ws)",
+						Value:   "legacy",
+						Usage:   "WebSocket protocol mode (legacy, ws)",
 						EnvVars: []string{"WSTUNNEL_MODE"},
 					},
 					&cli.StringFlag{

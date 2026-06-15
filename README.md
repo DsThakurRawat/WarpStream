@@ -1,6 +1,6 @@
 # wstunnel-go
 
-A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstunnel), designed for high performance, ease of use, and library integration.
+A feature-complete tunneling tool designed for high performance, ease of use, and library integration.
 
 `wstunnel-go` allows you to tunnel any traffic through a WebSocket or HTTP/2 connection, effectively bypassing restrictive firewalls and proxies that only allow HTTP/HTTPS traffic.
 
@@ -16,7 +16,7 @@ A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstu
 -   **TProxy Support**: Transparent proxying for TCP and UDP on Linux (requires root/CAP_NET_ADMIN).
 -   **Reverse Tunneling**: Stable support for static reverse TCP and reverse Unix socket tunnels (server-to-client).
 -   **Transports**:
-    -   **WebSocket-like transport**: Secure WebSocket-style transport (default) with intentional RFC 6455 deviations for compatibility with the original Rust implementation.
+    -   **WebSocket-like transport**: Secure WebSocket-style transport (default) with intentional RFC 6455 deviations.
     -   **RFC 6455 compliant WebSocket**: Enable strict RFC 6455 compliance with `--mode ws` (compatible with standard Go clients).
     -   **HTTP/2**: Full-duplex streaming over HTTP/2.
 -   **Deployment**:
@@ -28,7 +28,7 @@ A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstu
     -   **mTLS**: Support for client certificates and private keys.
     -   **ECH (Encrypted Client Hello)**: Enable ECH for enhanced privacy.
     -   **SNI Control**: Override or disable Server Name Indication.
-    -   **JWT Authentication**: Fully compatible with the original Rust implementation's JWT-based auth.
+    -   **JWT Authentication**: Advanced JWT-based authentication.
     -   **Restriction Rules**: Server-side YAML configuration to restrict allowed tunnel destinations and path prefixes.
 -   **Advanced Networking**:
     -   **SO_MARK**: (Linux only) Support for marking outgoing packets.
@@ -39,7 +39,70 @@ A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstu
     -   **Highly Concurrent**: Leverages Go's goroutines for efficient handling of many simultaneous tunnels.
     -   **Structured Logging**: Uses `log/slog` for modern, structured logging.
     -   **Library First**: Designed as a library for easy integration into other Go projects.
--   **Interoperability**: Maintains full protocol compatibility and CLI parity with the original Rust implementation.
+
+
+## Architecture
+
+`wstunnel-go` consists of a **Client** (running on your local/restricted machine) and a **Server** (running on an unrestricted remote machine).
+
+### Forward Tunneling Flow
+
+Here is how `wstunnel-go` wraps standard traffic (like an SSH connection) into a stealthy WebSocket stream to bypass a firewall:
+
+```mermaid
+sequenceDiagram
+    participant App as Local App (e.g. SSH)
+    participant Client as wstunnel-go Client
+    participant Firewall as Restrictive Firewall
+    participant Server as wstunnel-go Server
+    participant Dest as Destination (e.g. Server Port 22)
+
+    App->>Client: Connects (Local TCP/UDP/SOCKS)
+    Note over Client: Encapsulates payload
+    Client->>Firewall: Outbound wss:// (Port 443)
+    Firewall-->>Server: Forwards allowed HTTPS traffic
+    Note over Server: Decapsulates payload
+    Server->>Dest: Forwards raw TCP/UDP data
+    Dest-->>Server: Response
+    Server-->>Client: Secure wss:// response
+    Client-->>App: Raw data delivered
+```
+
+### System Topology
+
+`wstunnel-go` is designed to handle multiple connections simultaneously, acting as a gateway for your local network.
+
+```mermaid
+flowchart LR
+    subgraph Restricted Network
+        A[Browser / SSH / App] -->|TCP/UDP| B(wstunnel-go Client)
+    end
+    
+    subgraph Internet
+        FW((Corporate<br/>Firewall))
+    end
+    
+    subgraph Unrestricted Network
+        C(wstunnel-go Server)
+        D[Web Server]
+        E[SSH Daemon]
+        F[Any TCP/UDP Target]
+    end
+
+    B ====|Secure WebSocket / HTTP2 over 443| FW
+    FW ====|wss:// / https://| C
+    
+    C -->|Decapsulated| D
+    C -->|Decapsulated| E
+    C -->|Decapsulated| F
+
+    classDef client fill:#3b82f6,color:#fff,stroke:#2563eb;
+    classDef server fill:#10b981,color:#fff,stroke:#059669;
+    classDef fw fill:#ef4444,color:#fff,stroke:#dc2626;
+    class B client;
+    class C server;
+    class FW fw;
+```
 
 ## Installation
 
@@ -122,7 +185,7 @@ Use the provided PowerShell scripts in the `packaging/windows` directory to regi
         route /wstunnel/* {
             wstunnel {
                 prefix /wstunnel
-                mode rust
+                mode legacy
                 # restrict_config /etc/wstunnel/rules.yaml
             }
         }
@@ -199,8 +262,8 @@ wstunnel-go server --tls-certificate cert.pem --tls-private-key key.pem --tls-cl
 #### Server Flags
 -   `--restrict-to`: Restrict tunnels to specific destinations.
 -   `-r, --restrict-http-upgrade-path-prefix`: Restrict tunnels to specific path prefixes.
--   `--jwt-secret`: Shared secret used to verify tunnel JWT signatures when running with `--mode ws`. In `--mode rust`, tunnel JWTs are parsed in Rust-compatible mode and are not cryptographically verified.
--   `--insecure-no-jwt-validation`: Allow Rust-compatible parsing of HS256 tunnel JWTs without signature verification in situations where `--mode ws` would otherwise reject them.
+-   `--jwt-secret`: Shared secret used to verify tunnel JWT signatures when running with `--mode ws`. In `--mode legacy`, tunnel JWTs are parsed in legacy mode and are not cryptographically verified.
+-   `--insecure-no-jwt-validation`: Allow legacy parsing of HS256 tunnel JWTs without signature verification in situations where `--mode ws` would otherwise reject them.
 -   `--restrict-config`: Path to a YAML file with restriction rules.
 -   `--tls-certificate`, `--tls-private-key`: Paths to TLS cert/key for the server.
 -   `--tls-client-ca-certs`: Enable mTLS by providing CA certificates to verify clients.
@@ -249,38 +312,35 @@ func main() {
 
 ## Status & Interoperability
 
-`wstunnel-go` aims for 100% parity with the [Rust version](https://github.com/erebe/wstunnel).
+## Status
 
-| Feature | Status | Interop (Rust) |
-| :--- | :---: | :---: |
-| TCP Forward/Reverse | ✅ | ✅ |
-| UDP Forward | ✅ | ✅ |
-| UDP Reverse | ❌ | ❌ |
-| SOCKS5 Forward | ✅ | ✅ |
-| SOCKS5 Reverse | ❌ | ❌ |
-| HTTP Proxy (CONNECT) | ✅ | ✅ |
-| Reverse HTTP Proxy | ❌ | ❌ |
-| Unix Sockets | ✅ | ✅ |
-| Stdio Tunneling | ✅ | ✅ |
-| YAML Restrictions | ✅ | ✅ |
-| mTLS | ✅ | ✅ |
-| HTTP/2 Transport | ✅ | ✅ |
-| TProxy (Linux) | ✅ | ✅ |
-| JWT Authentication | ✅ | ✅ |
+| Feature | Status |
+| :--- | :---: |
+| TCP Forward/Reverse | ✅ |
+| UDP Forward | ✅ |
+| UDP Reverse | ❌ |
+| SOCKS5 Forward | ✅ |
+| SOCKS5 Reverse | ❌ |
+| HTTP Proxy (CONNECT) | ✅ |
+| Reverse HTTP Proxy | ❌ |
+| Unix Sockets | ✅ |
+| Stdio Tunneling | ✅ |
+| YAML Restrictions | ✅ |
+| mTLS | ✅ |
+| HTTP/2 Transport | ✅ |
+| TProxy (Linux) | ✅ |
+| JWT Authentication | ✅ |
 
 ### Performance Metrics
 
-| Metric | wstunnel (Rust) | wstunnel-go |
-| :--- | :---: | :---: |
-| Throughput (TCP) | ~ Gbps | ~ Gbps |
-| Latency Overhead | < 1ms | < 1ms |
-| Memory Usage (Idle) | ~ 10MB | ~ 20MB |
-
-*Note: Benchmarks are environment-dependent. Go version typically shows slightly higher memory usage due to GC and goroutine stacks, but comparable throughput.*
+| Metric | wstunnel-go |
+| :--- | :---: |
+| Throughput (TCP) | ~ Gbps |
+| Latency Overhead | < 1ms |
+| Memory Usage (Idle) | ~ 20MB |
 
 ### Compatibility Versions
 
--   **Rust wstunnel**: v9.0.0+
 -   **Go**: 1.25+
 
 ## Contributing
