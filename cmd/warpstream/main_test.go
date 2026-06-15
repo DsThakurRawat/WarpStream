@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/divyansh-rawat/wstunnel-go/pkg/client"
-	"github.com/divyansh-rawat/wstunnel-go/pkg/server"
+	"github.com/divyansh-rawat/warpstream/pkg/client"
+	"github.com/divyansh-rawat/warpstream/pkg/server"
 	"github.com/urfave/cli/v2"
 )
 

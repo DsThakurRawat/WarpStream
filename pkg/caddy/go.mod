@@ -1,12 +1,12 @@
-module github.com/divyansh-rawat/wstunnel-go/pkg/caddy
+module github.com/divyansh-rawat/warpstream/pkg/caddy
 
 go 1.25.7
 
-replace github.com/divyansh-rawat/wstunnel-go => ../../
+replace github.com/divyansh-rawat/warpstream => ../../
 
 require (
 	github.com/caddyserver/caddy/v2 v2.11.2
-	github.com/divyansh-rawat/wstunnel-go v0.0.1
+	github.com/divyansh-rawat/warpstream v0.0.1
 	go.uber.org/zap v1.28.0
 )
 

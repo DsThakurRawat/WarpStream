@@ -25,10 +25,10 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
 # Copy the binary from the build stage
-COPY --from=builder /app/bin/wstunnel-go /usr/local/bin/wstunnel-go
+COPY --from=builder /app/bin/warpstream /usr/local/bin/warpstream
 
 # Create a non-root user
-RUN adduser -D -g '' wstunnel
-USER wstunnel
+RUN adduser -D -g '' warpstream
+USER warpstream
 
-ENTRYPOINT ["wstunnel-go"]
+ENTRYPOINT ["warpstream"]
