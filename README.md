@@ -1,8 +1,13 @@
-# warpstream
+# WarpStream
 
-A feature-complete tunneling tool designed for high performance, ease of use, and library integration.
+> **Author:** [Divyansh Rawat](https://github.com/DsThakurRawat) | Go 1.25+
 
-`warpstream` allows you to tunnel any traffic through a WebSocket or HTTP/2 connection, effectively bypassing restrictive firewalls and proxies that only allow HTTP/HTTPS traffic.
+A high-performance network tunneling tool written in Go, designed for ease of use and library integration.
+
+`warpstream` tunnels TCP, UDP, SOCKS5, HTTP, Unix Socket, and Stdio traffic over WebSocket or HTTP/2 — bypassing restrictive firewalls that only allow HTTPS.
+
+For a detailed breakdown of the internals, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 
 ## Features
 
