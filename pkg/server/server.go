@@ -18,12 +18,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/websocket"
 	"github.com/divyansh-rawat/warpstream/internal/socket"
 	"github.com/divyansh-rawat/warpstream/pkg/protocol"
 	"github.com/divyansh-rawat/warpstream/pkg/tunnel"
 	"github.com/divyansh-rawat/warpstream/pkg/wst"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/websocket"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
