@@ -50,6 +50,14 @@ func (c *Conn) Close() error {
 	return c.rwc.Close()
 }
 
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.rwc.RemoteAddr()
+}
+
+func (c *Conn) LocalAddr() net.Addr {
+	return c.rwc.LocalAddr()
+}
+
 func (c *Conn) SetPingHandler(h func(string) error) {
 	if h == nil {
 		h = func(message string) error {
