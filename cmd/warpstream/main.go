@@ -166,6 +166,9 @@ func applyServerFlagOverrides(c *cli.Context, config *server.Config, listenAddr 
 	if flagExplicitlySet(c, "restrict-config") || config.RestrictConfig == "" {
 		config.RestrictConfig = c.String("restrict-config")
 	}
+	if flagExplicitlySet(c, "tls") {
+		config.Tls = c.Bool("tls")
+	}
 	if flagExplicitlySet(c, "tls-certificate") || config.TlsCertificate == "" {
 		config.TlsCertificate = c.String("tls-certificate")
 	}
@@ -415,6 +418,10 @@ func main() {
 					&cli.StringFlag{
 						Name:  "restrict-config",
 						Usage: "Path to restriction config file",
+					},
+					&cli.BoolFlag{
+						Name:  "tls",
+						Usage: "Enable ephemeral self-signed TLS certificate if explicit cert/key not provided",
 					},
 					&cli.StringFlag{
 						Name:  "tls-certificate",

@@ -42,6 +42,7 @@ type Config struct {
 	RestrictTo                     []string      `yaml:"restrict_to"`
 	RestrictHttpUpgradePathPrefix  []string      `yaml:"restrict_http_upgrade_path_prefix_list"` // Renamed list to avoid clash? No, Rust uses same name but different structure.
 	RestrictConfig                 string        `yaml:"restrict_config"`
+	Tls                            bool          `yaml:"tls"`
 	TlsCertificate                 string        `yaml:"tls_certificate"`
 	TlsPrivateKey                  string        `yaml:"tls_private_key"`
 	TlsClientCaCerts               string        `yaml:"tls_client_ca_certs"`
@@ -243,7 +244,7 @@ func (s *Server) Start() error {
 		return fmt.Errorf("failed to configure HTTP/2: %w", err)
 	}
 
-	if s.Config.TlsCertificate != "" && s.Config.TlsPrivateKey != "" {
+	if (s.Config.TlsCertificate != "" && s.Config.TlsPrivateKey != "") || s.Config.Tls || s.Config.TlsClientCaCerts != "" {
 		tlsConfig := &tls.Config{
 			MinVersion: tls.VersionTLS12,
 		}
@@ -259,8 +260,20 @@ func (s *Server) Start() error {
 			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 
+		if s.Config.TlsCertificate != "" && s.Config.TlsPrivateKey != "" {
+			srv.TLSConfig = tlsConfig
+			return srv.ServeTLS(ln, s.Config.TlsCertificate, s.Config.TlsPrivateKey)
+		}
+
+		// Generate ephemeral self-signed certificate
+		cert, err := generateSelfSignedCert(nil)
+		if err != nil {
+			return fmt.Errorf("failed to generate ephemeral self-signed certificate: %w", err)
+		}
+		slog.Warn("Using ephemeral self-signed TLS certificate; clients must disable certificate verification")
+		tlsConfig.Certificates = []tls.Certificate{cert}
 		srv.TLSConfig = tlsConfig
-		return srv.ServeTLS(ln, s.Config.TlsCertificate, s.Config.TlsPrivateKey)
+		return srv.ServeTLS(ln, "", "")
 	}
 
 	return srv.Serve(ln)
