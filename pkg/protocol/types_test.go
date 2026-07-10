@@ -10,7 +10,7 @@ import (
 func TestCredentials_JSON(t *testing.T) {
 	c := Credentials{
 		Username: "admin",
-		Password: "password",
+		Password: "dummy_pass_for_test",
 	}
 
 	data, err := json.Marshal(c)
@@ -19,7 +19,7 @@ func TestCredentials_JSON(t *testing.T) {
 	}
 
 	// Should be an array of two strings
-	wantJSON := `["admin","password"]`
+	wantJSON := `["admin","dummy_pass_for_test"]`
 	if string(data) != wantJSON {
 		t.Errorf("Marshal() got = %s, want %s", string(data), wantJSON)
 	}
