@@ -261,8 +261,14 @@ func (s *Server) Start() error {
 		}
 
 		if s.Config.TlsCertificate != "" && s.Config.TlsPrivateKey != "" {
+			reloader, err := NewCertReloader(s.Config.TlsCertificate, s.Config.TlsPrivateKey)
+			if err != nil {
+				return fmt.Errorf("failed to load TLS certificates: %w", err)
+			}
+			reloader.WatchSignals()
+			tlsConfig.GetCertificate = reloader.GetCertificate
 			srv.TLSConfig = tlsConfig
-			return srv.ServeTLS(ln, s.Config.TlsCertificate, s.Config.TlsPrivateKey)
+			return srv.ServeTLS(ln, "", "")
 		}
 
 		// Generate ephemeral self-signed certificate
