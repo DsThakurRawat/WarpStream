@@ -181,7 +181,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 		}
 	case "udp":
 		if isReverse {
-			return nil, fmt.Errorf("reverse UDP tunnels are not implemented")
+			ltr.Protocol = protocol.LocalProtocol{ReverseUdp: &protocol.ReverseUdpProtocol{Timeout: getTimeout()}}
 		} else {
 			ltr.Protocol = protocol.LocalProtocol{Udp: &protocol.UdpProtocol{Timeout: getTimeout()}}
 		}

@@ -104,10 +104,19 @@ func TestParseTunnelArg(t *testing.T) {
 			},
 		},
 		{
-			name:      "Reverse UDP unsupported",
+			name:      "Reverse UDP",
 			arg:       "udp://9090:localhost:443",
 			isReverse: true,
-			wantErr:   true,
+			want: &protocol.LocalToRemote{
+				Local:  "127.0.0.1:9090",
+				Remote: "localhost",
+				Port:   443,
+				Protocol: protocol.LocalProtocol{
+					ReverseUdp: &protocol.ReverseUdpProtocol{
+						Timeout: &protocol.Duration{Secs: 30},
+					},
+				},
+			},
 		},
 		{
 			name:      "Reverse SOCKS5",

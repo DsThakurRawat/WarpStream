@@ -36,6 +36,7 @@ type tunnelListener struct {
 	isUnix    bool
 	protocol  protocol.LocalProtocol
 	ln        net.Listener
+	udpConn   *net.UDPConn
 	waiting   []*waitingConn
 	waitCap   int
 	queueMu   sync.Mutex
@@ -204,8 +205,13 @@ func (m *ReverseTunnelManager) closeTunnelListener(tl *tunnelListener, closeList
 	}
 	tl.queueMu.Unlock()
 
-	if closeListener && tl.ln != nil {
-		_ = tl.ln.Close()
+	if closeListener {
+		if tl.ln != nil {
+			_ = tl.ln.Close()
+		}
+		if tl.udpConn != nil {
+			_ = tl.udpConn.Close()
+		}
 	}
 }
 
@@ -381,7 +387,11 @@ func (m *ReverseTunnelManager) getOrCreateListener(claims *protocol.JwtTunnelCon
 	} else {
 		bindAddr = net.JoinHostPort(claims.Remote, fmt.Sprintf("%d", claims.Port))
 		isUnix = false
-		network = "tcp"
+		if claims.Protocol.ReverseUdp != nil {
+			network = "udp"
+		} else {
+			network = "tcp"
+		}
 	}
 
 	m.mu.Lock()
@@ -398,22 +408,44 @@ func (m *ReverseTunnelManager) getOrCreateListener(claims *protocol.JwtTunnelCon
 			}
 		}
 
-		ln, err := lc.Listen(context.Background(), network, bindAddr)
-		if err != nil {
-			return nil, bindAddr, err
+		var ln net.Listener
+		var udpConn *net.UDPConn
+
+		if network == "udp" {
+			pc, err := lc.ListenPacket(context.Background(), "udp", bindAddr)
+			if err != nil {
+				return nil, bindAddr, err
+			}
+			uc, ok := pc.(*net.UDPConn)
+			if !ok {
+				_ = pc.Close()
+				return nil, bindAddr, fmt.Errorf("expected UDP connection")
+			}
+			udpConn = uc
+		} else {
+			l, err := lc.Listen(context.Background(), network, bindAddr)
+			if err != nil {
+				return nil, bindAddr, err
+			}
+			ln = l
 		}
 		tl = &tunnelListener{
 			addr:     bindAddr,
 			isUnix:   isUnix,
 			protocol: claims.Protocol,
 			ln:       ln,
+			udpConn:  udpConn,
 			waitCap:  10,
 			quit:     make(chan struct{}),
 			lastUsed: time.Now(),
 		}
 		tl.queueCond = sync.NewCond(&tl.queueMu)
 		m.listeners[bindAddr] = tl
-		go m.runListener(tl)
+		if udpConn != nil {
+			go m.runUdpListener(tl, udpConn)
+		} else {
+			go m.runListener(tl)
+		}
 	}
 	tl.lastUsed = time.Now()
 	return tl, bindAddr, nil
