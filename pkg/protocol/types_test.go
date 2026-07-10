@@ -42,7 +42,7 @@ func TestCredentials_String(t *testing.T) {
 	}{
 		{
 			name: "with password",
-			cred: Credentials{Username: "admin", Password: "secret123"},
+			cred: Credentials{Username: "admin", Password: "dummy_pass_for_test"},
 			want: `Credentials{Username: "admin", Password: <redacted>}`,
 		},
 		{
