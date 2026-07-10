@@ -373,6 +373,44 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go s.handleConnection(wsConn, claims)
 }
 
+type stringAddr string
+
+func (s stringAddr) Network() string { return "tcp" }
+func (s stringAddr) String() string  { return string(s) }
+
+func shouldWriteProxyHeader(claims *protocol.JwtTunnelConfig) bool {
+	if claims == nil {
+		return false
+	}
+	if claims.Protocol.Tcp != nil && claims.Protocol.Tcp.ProxyProtocol {
+		return true
+	}
+	if claims.Protocol.HttpProxy != nil && claims.Protocol.HttpProxy.ProxyProtocol {
+		return true
+	}
+	if claims.Protocol.Stdio != nil && claims.Protocol.Stdio.ProxyProtocol {
+		return true
+	}
+	if claims.Protocol.Unix != nil && claims.Protocol.Unix.ProxyProtocol {
+		return true
+	}
+	return false
+}
+
+func (s *Server) dialTargetAndMaybeProxyHeader(claims *protocol.JwtTunnelConfig, network, targetAddr string, srcAddr net.Addr) (net.Conn, error) {
+	conn, err := net.DialTimeout(network, targetAddr, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	if network == "tcp" && shouldWriteProxyHeader(claims) {
+		if err := tunnel.WriteProxyHeaderV2(conn, srcAddr, conn.RemoteAddr()); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("failed to write PROXY protocol header: %w", err)
+		}
+	}
+	return conn, nil
+}
+
 func (s *Server) handleConnection(wsConn *wst.Conn, claims *protocol.JwtTunnelConfig) {
 	defer func() { _ = wsConn.Close() }()
 
@@ -396,7 +434,7 @@ func (s *Server) handleConnection(wsConn *wst.Conn, claims *protocol.JwtTunnelCo
 			}
 		}
 
-		conn, err := net.DialTimeout(network, targetAddr, 10*time.Second)
+		conn, err := s.dialTargetAndMaybeProxyHeader(claims, network, targetAddr, wsConn.RemoteAddr())
 		if err != nil {
 			slog.Error("Failed to connect to target", "network", network, "target", targetAddr, "err", err)
 			return
@@ -442,7 +480,7 @@ func (s *Server) handleGorillaConnection(wsConn *websocket.Conn, claims *protoco
 			}
 		}
 
-		conn, err := net.DialTimeout(network, targetAddr, 10*time.Second)
+		conn, err := s.dialTargetAndMaybeProxyHeader(claims, network, targetAddr, wsConn.RemoteAddr())
 		if err != nil {
 			slog.Error("Failed to connect to target (gorilla)", "network", network, "target", targetAddr, "err", err)
 			return
@@ -498,7 +536,7 @@ func (s *Server) handleHttp2Connection(w http.ResponseWriter, r *http.Request, c
 			}
 		}
 
-		conn, err := net.DialTimeout(network, targetAddr, 10*time.Second)
+		conn, err := s.dialTargetAndMaybeProxyHeader(claims, network, targetAddr, stringAddr(r.RemoteAddr))
 		if err != nil {
 			slog.Error("Failed to connect to target", "network", network, "target", targetAddr, "err", err)
 			_ = rwc.Close()
