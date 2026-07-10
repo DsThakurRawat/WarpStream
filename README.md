@@ -13,8 +13,10 @@ A feature-complete Go implementation of [warpstream](https://github.com/erebe/wa
     -   **HTTP Proxy**: Local HTTP CONNECT proxy (with optional authentication).
     -   **Unix Domain Sockets**: Tunneling to/from local unix sockets.
     -   **Stdio**: Tunneling via standard input/output.
--   **TProxy Support**: Transparent proxying for TCP and UDP on Linux (requires root/CAP_NET_ADMIN).
--   **Reverse Tunneling**: Stable support for static reverse TCP and reverse Unix socket tunnels (server-to-client).
+-   **TProxy Support**: Transparent proxying for TCP and UDP on Linux (requires root/`CAP_NET_ADMIN`). TCP works with both `-j TPROXY` (via `LocalAddr()`) and `-j REDIRECT` (via `SO_ORIGINAL_DST`); UDP recovers the per-datagram original destination via `IP_RECVORIGDSTADDR`.
+-   **Reverse Tunneling**: Server-to-client tunnels.
+    -   **Rust-compatible**: static reverse **TCP** and reverse **Unix** sockets.
+    -   **Go-to-Go only**: dynamic reverse **UDP**, **SOCKS5**, and **HTTP CONNECT** proxies. These use an in-band target frame (like `--mode ws`, they interoperate between Go client and Go server only, not with the Rust implementation).
 -   **Transports**:
     -   **WebSocket-like transport**: Secure WebSocket-style transport (default) with intentional RFC 6455 deviations for compatibility with the original Rust implementation.
     -   **RFC 6455 compliant WebSocket**: Enable strict RFC 6455 compliance with `--mode ws` (compatible with standard Go clients).
@@ -26,6 +28,8 @@ A feature-complete Go implementation of [warpstream](https://github.com/erebe/wa
 -   **Security**:
     -   **TLS (wss://, https://)**: Full TLS support with certificate verification.
     -   **mTLS**: Support for client certificates and private keys.
+    -   **Ephemeral self-signed certificate**: Start a TLS server with `--tls` and no cert/key to auto-generate an in-memory self-signed certificate (clients must trust it or disable verification).
+    -   **Certificate hot-reload**: Reload server and client TLS certificates without a restart — automatically via file-change polling, or on demand by sending `SIGHUP`. A failed reload keeps the last-good certificate.
     -   **ECH (Encrypted Client Hello)**: Enable ECH for enhanced privacy.
     -   **SNI Control**: Override or disable Server Name Indication.
     -   **JWT Authentication**: Fully compatible with the original Rust implementation's JWT-based auth.
@@ -34,12 +38,13 @@ A feature-complete Go implementation of [warpstream](https://github.com/erebe/wa
     -   **SO_MARK**: (Linux only) Support for marking outgoing packets.
     -   **DNS Control**: Custom DNS resolvers and IPv4/IPv6 preference.
     -   **Proxy Support**: Connect through HTTP/HTTPS proxies (with authentication).
-    -   **Proxy Protocol**: Support for Proxy Protocol (v1/v2) to preserve client IP.
+    -   **PROXY Protocol**: Server-side injection of a HAProxy PROXY v2 header to the target (via `?proxy_protocol`) so backends see the originating client address.
+    -   **UDP session timeout**: Idle UDP sessions are reclaimed after `?timeout_sec` (default 30s) on both client and server.
 -   **Modern Architecture**:
     -   **Highly Concurrent**: Leverages Go's goroutines for efficient handling of many simultaneous tunnels.
     -   **Structured Logging**: Uses `log/slog` for modern, structured logging.
     -   **Library First**: Designed as a library for easy integration into other Go projects.
--   **Interoperability**: Maintains full protocol compatibility and CLI parity with the original Rust implementation.
+-   **Interoperability**: Maintains protocol compatibility and CLI parity with the original Rust implementation for all forward tunnels and static reverse (TCP/Unix) tunnels. Dynamic reverse tunnels (UDP/SOCKS5/HTTP) are a Go-to-Go extension and do not interoperate with the Rust implementation.
 
 ## Installation
 
@@ -147,6 +152,22 @@ warpstream client -L tcp://8080:google.com:443 wss://my-server.com
 # Reverse tunnel: remote server port 8080 forwards to local 127.0.0.1:80
 warpstream client -R tcp://8080:127.0.0.1:80 wss://my-server.com
 
+# Reverse SOCKS5 proxy (Go-to-Go only): server exposes a SOCKS5 listener on :1080,
+# dynamic destinations are dialed from the client's network
+warpstream client -R socks5://0.0.0.0:1080 wss://my-server.com
+
+# Reverse HTTP CONNECT proxy (Go-to-Go only)
+warpstream client -R http://0.0.0.0:3128 wss://my-server.com
+
+# Preserve the client IP to the backend via a PROXY v2 header
+warpstream client -L "tcp://8080:backend.internal:80?proxy_protocol" wss://my-server.com
+
+# UDP tunnel with a 15s idle-session timeout
+warpstream client -L "udp://5353:1.1.1.1:53?timeout_sec=15" wss://my-server.com
+
+# Transparent proxy (Linux, needs CAP_NET_ADMIN + an iptables rule — see below)
+warpstream client -L tproxy+tcp://0.0.0.0:1234 wss://my-server.com
+
 # Use HTTP/2 transport
 warpstream client -L tcp://8080:google.com:443 https://my-server.com
 
@@ -154,14 +175,45 @@ warpstream client -L tcp://8080:google.com:443 https://my-server.com
 warpstream client --dns-resolver 8.8.8.8 --dns-resolver-prefer-ipv4 -L tcp://8080:google.com:443 wss://my-server.com
 ```
 
+#### Tunnel address syntax
+
+Tunnels are `scheme://[bind_or_listen:]host:port[?options]`. Supported schemes: `tcp`,
+`udp`, `socks5`, `http`, `unix`, `stdio`, `tproxy+tcp`, `tproxy+udp` (forward, via `-L`);
+`tcp`, `udp`, `unix`, `socks5`, `http` (reverse, via `-R`). Query options:
+
+-   `?proxy_protocol` — prepend a HAProxy PROXY v2 header to the target connection (TCP forward tunnels).
+-   `?timeout_sec=N` — idle timeout in seconds for UDP sessions (default 30).
+-   `?login=USER&password=PASS` — credentials for `socks5`/`http` proxy listeners.
+
+#### Transparent proxy (TPROXY) setup
+
+`tproxy+tcp` / `tproxy+udp` require Linux, `CAP_NET_ADMIN` (or root), and an iptables
+rule to redirect traffic to the listener. Example for true TPROXY on port `1234`:
+
+```bash
+iptables -t mangle -A PREROUTING -p tcp --dport 80 \
+  -j TPROXY --on-port 1234 --tproxy-mark 0x1/0x1
+ip rule add fwmark 0x1 lookup 100
+ip route add local 0.0.0.0/0 dev lo table 100
+```
+
+`-j REDIRECT` (DNAT) setups are also supported — the client falls back to
+`SO_ORIGINAL_DST` when the original destination is not in `LocalAddr()`.
+
 ### Server Mode
 
 ```bash
 # Start a basic server listening on port 8080
 warpstream server ws://0.0.0.0:8080
 
+# Start a TLS server with an auto-generated ephemeral self-signed certificate
+warpstream server --tls wss://0.0.0.0:8443
+
 # Start server with mTLS and restriction rules
 warpstream server --tls-certificate cert.pem --tls-private-key key.pem --tls-client-ca-certs ca.pem --restrict-config rules.yaml
+
+# Reload the server's TLS certificate in place after replacing the files on disk
+kill -HUP "$(pidof warpstream)"   # also reloads automatically within a few seconds
 ```
 
 ## Configuration
@@ -179,31 +231,41 @@ warpstream server --tls-certificate cert.pem --tls-private-key key.pem --tls-cli
 #### Client Flags
 -   `-L, --local-to-remote`: Define a local-to-remote tunnel.
 -   `-R, --remote-to-local`: Define a remote-to-local (reverse) tunnel.
+-   `--mode`: Transport mode, `rust` (default, Rust-compatible) or `ws` (strict RFC 6455).
 -   `--http-upgrade-path-prefix`: HTTP upgrade path prefix (default: "v1").
 -   `--jwt-secret`: Shared secret used to sign tunnel JWTs.
 -   `--http-upgrade-credentials`: Basic auth credentials for upgrade request.
 -   `-H, --header`: Custom HTTP headers for upgrade request.
 -   `--http-headers-file`: File containing custom HTTP headers.
 -   `--tls-verify-certificate`: Enable/disable TLS cert verification.
+-   `--tls-certificate`, `--tls-private-key`: Client certificate/key for mTLS (hot-reloaded on change).
 -   `--tls-sni-override`: Override SNI domain.
 -   `--tls-sni-disable`: Disable sending SNI.
 -   `--tls-ech-enable`: Enable ECH.
--   `--http-proxy`: Use an HTTP proxy for the connection.
+-   `--http-proxy`, `--http-proxy-login`, `--http-proxy-password`: Route the connection through an HTTP proxy.
 -   `--connection-min-idle`: Maintain a pool of idle connections.
 -   `--connection-retry-max-backoff`: Maximum retry backoff for server connection.
+-   `--reverse-tunnel-connection-retry-max-backoff`: Maximum retry backoff for reverse tunnels.
+-   `--socket-so-mark`: (Linux) Set `SO_MARK` on outgoing sockets.
 -   `--dns-resolver`: Custom DNS resolver(s).
 -   `--dns-resolver-prefer-ipv4`: Prioritize IPv4 for DNS lookup.
 -   `--websocket-ping-frequency`: Frequency of WebSocket pings.
 -   `--websocket-mask-frame`: Enable masking of WebSocket frames.
 
 #### Server Flags
+-   `--mode`: Transport mode, `rust` (default) or `ws` (strict RFC 6455).
 -   `--restrict-to`: Restrict tunnels to specific destinations.
 -   `-r, --restrict-http-upgrade-path-prefix`: Restrict tunnels to specific path prefixes.
 -   `--jwt-secret`: Shared secret used to verify tunnel JWT signatures when running with `--mode ws`. In `--mode rust`, tunnel JWTs are parsed in Rust-compatible mode and are not cryptographically verified.
 -   `--insecure-no-jwt-validation`: Allow Rust-compatible parsing of HS256 tunnel JWTs without signature verification in situations where `--mode ws` would otherwise reject them.
 -   `--restrict-config`: Path to a YAML file with restriction rules.
--   `--tls-certificate`, `--tls-private-key`: Paths to TLS cert/key for the server.
+-   `--tls`: Serve TLS; if no cert/key is provided, generate an ephemeral self-signed certificate.
+-   `--tls-certificate`, `--tls-private-key`: Paths to TLS cert/key for the server (hot-reloaded on change or `SIGHUP`).
 -   `--tls-client-ca-certs`: Enable mTLS by providing CA certificates to verify clients.
+-   `--socket-so-mark`: (Linux) Set `SO_MARK` on outgoing sockets.
+-   `--dns-resolver`, `--dns-resolver-prefer-ipv4`: Custom DNS resolver settings.
+-   `--websocket-ping-frequency`, `--websocket-mask-frame`: WebSocket keep-alive / frame masking.
+-   `--http-proxy`, `--http-proxy-login`, `--http-proxy-password`: Route server-side dials through an HTTP proxy.
 -   `--remote-to-local-server-idle-timeout`: Idle timeout for reverse tunnel server.
 
 ### YAML Configuration Example
@@ -255,17 +317,22 @@ func main() {
 | :--- | :---: | :---: |
 | TCP Forward/Reverse | ✅ | ✅ |
 | UDP Forward | ✅ | ✅ |
-| UDP Reverse | ❌ | ❌ |
+| UDP Reverse | ✅ | ⚠️ Go-to-Go only |
 | SOCKS5 Forward | ✅ | ✅ |
-| SOCKS5 Reverse | ❌ | ❌ |
+| SOCKS5 Reverse | ✅ | ⚠️ Go-to-Go only |
 | HTTP Proxy (CONNECT) | ✅ | ✅ |
-| Reverse HTTP Proxy | ❌ | ❌ |
+| Reverse HTTP Proxy | ✅ | ⚠️ Go-to-Go only |
 | Unix Sockets | ✅ | ✅ |
 | Stdio Tunneling | ✅ | ✅ |
 | YAML Restrictions | ✅ | ✅ |
 | mTLS | ✅ | ✅ |
+| Ephemeral self-signed TLS (`--tls`) | ✅ | N/A |
+| TLS cert hot-reload (poll + SIGHUP) | ✅ | N/A |
+| PROXY protocol injection (`?proxy_protocol`) | ✅ | ✅ |
+| UDP idle timeout (`?timeout_sec`) | ✅ | ✅ |
 | HTTP/2 Transport | ✅ | ✅ |
-| TProxy (Linux) | ✅ | ✅ |
+| TProxy TCP/UDP (Linux) | ✅ | ✅ |
+| ECH (Encrypted Client Hello) | ✅ | ✅ |
 | JWT Authentication | ✅ | ✅ |
 
 ### Performance Metrics
