@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
-	"github.com/divyansh-rawat/warpstream/pkg/tunnel"
-	"github.com/divyansh-rawat/warpstream/pkg/wst"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/kad/wstunnel-go/pkg/protocol"
+	"github.com/kad/wstunnel-go/pkg/tunnel"
+	"github.com/kad/wstunnel-go/pkg/wst"
 	"golang.org/x/net/http2"
 )
 
@@ -54,7 +54,7 @@ type Config struct {
 	DnsResolverPreferIpv4                  bool              `yaml:"dns_resolver_prefer_ipv4"`
 	LocalToRemote                          []string          `yaml:"local_to_remote"`
 	RemoteToLocal                          []string          `yaml:"remote_to_local"`
-	WebsocketProtocol                      string            `yaml:"mode"` // "legacy" or "ws"
+	WebsocketProtocol                      string            `yaml:"mode"` // "rust" or "ws"
 }
 
 type Client struct {
@@ -86,7 +86,7 @@ func (c *Client) generateJWT(requestID string, p protocol.LocalProtocol, remoteH
 	if secret == "" {
 		secret = legacyJWTSecret
 		legacyJWTSecretWarning.Do(func() {
-			slog.Warn("Using legacy default JWT secret for Legacy compatibility; configure jwt_secret for secure deployments")
+			slog.Warn("Using legacy default JWT secret for Rust compatibility; configure jwt_secret for secure deployments")
 		})
 	}
 
@@ -118,7 +118,7 @@ func (c *Client) loadHttpHeaders() map[string]string {
 	return headers
 }
 
-func (c *Client) connectToWarpstream(p protocol.LocalProtocol, remoteHost string, remotePort uint16) (*wst.Conn, *http.Response, error) {
+func (c *Client) connectToWstunnel(p protocol.LocalProtocol, remoteHost string, remotePort uint16) (*wst.Conn, *http.Response, error) {
 	requestID := uuid.New().String()
 	token, err := c.generateJWT(requestID, p, remoteHost, remotePort)
 	if err != nil {
@@ -374,7 +374,7 @@ func (c *Client) connectToTransport(p protocol.LocalProtocol, remoteHost string,
 		return &tunnelStream{gorilla: ws, r: resp, err: err}
 	}
 
-	ws, resp, err := c.connectToWarpstream(p, remoteHost, remotePort)
+	ws, resp, err := c.connectToWstunnel(p, remoteHost, remotePort)
 	return &tunnelStream{ws: ws, r: resp, err: err}
 }
 
@@ -750,7 +750,7 @@ func (c *Client) handleHttpProxy(conn net.Conn, ltr *protocol.LocalToRemote) {
 		credentials = ltr.Protocol.HttpProxy.Credentials
 	}
 	if !authenticateHTTPProxy(req.Header.Get("Proxy-Authorization"), credentials) {
-		resp := "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"warpstream\"\r\n\r\n"
+		resp := "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"wstunnel-go\"\r\n\r\n"
 		_, _ = conn.Write([]byte(resp))
 		return
 	}

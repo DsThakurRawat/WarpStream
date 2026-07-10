@@ -10,9 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/divyansh-rawat/warpstream/internal/rlimit"
-	"github.com/divyansh-rawat/warpstream/pkg/client"
-	"github.com/divyansh-rawat/warpstream/pkg/server"
+	"github.com/kad/wstunnel-go/internal/rlimit"
+	"github.com/kad/wstunnel-go/pkg/client"
+	"github.com/kad/wstunnel-go/pkg/server"
 )
 
 type FullConfig struct {
@@ -195,25 +195,30 @@ func applyServerFlagOverrides(c *cli.Context, config *server.Config, listenAddr 
 func main() {
 	rlimit.RaiseFdLimit()
 	app := &cli.App{
-		Name:                   "warpstream",
-		Usage:                  "A Go client/server for warpstream",
+		Name:                   "wstunnel-go",
+		Usage:                  "A Go client/server for wstunnel",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
 				Usage:   "Path to config file (YAML)",
-				EnvVars: []string{"WARPSTREAM_CONFIG"},
+				EnvVars: []string{"WSTUNNEL_CONFIG"},
 			},
 			&cli.StringFlag{
 				Name:    "no-color",
 				Usage:   "Disable color output",
 				EnvVars: []string{"NO_COLOR"},
 			},
+			&cli.IntFlag{
+				Name:    "nb-worker-threads",
+				Usage:   "Number of worker threads",
+				EnvVars: []string{"TOKIO_WORKER_THREADS"},
+			},
 			&cli.StringFlag{
 				Name:    "log-lvl",
 				Value:   "INFO",
 				Usage:   "Log verbosity (TRACE, DEBUG, INFO, WARN, ERROR, OFF)",
-				EnvVars: []string{"WARPSTREAM_LOG_LVL", "RUST_LOG"},
+				EnvVars: []string{"WSTUNNEL_LOG_LVL", "RUST_LOG"},
 			},
 		},
 		Before: func(c *cli.Context) error {
@@ -223,7 +228,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "client",
-				Usage: "Run warpstream client",
+				Usage: "Run wstunnel client",
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
 						Name:    "local-to-remote",
@@ -282,18 +287,18 @@ func main() {
 					&cli.StringFlag{
 						Name:    "http-proxy-login",
 						Usage:   "Login for http proxy",
-						EnvVars: []string{"WARPSTREAM_HTTP_PROXY_LOGIN"},
+						EnvVars: []string{"WSTUNNEL_HTTP_PROXY_LOGIN"},
 					},
 					&cli.StringFlag{
 						Name:    "http-proxy-password",
 						Usage:   "Password for http proxy",
-						EnvVars: []string{"WARPSTREAM_HTTP_PROXY_PASSWORD"},
+						EnvVars: []string{"WSTUNNEL_HTTP_PROXY_PASSWORD"},
 					},
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "legacy",
-						Usage:   "WebSocket protocol mode (legacy, ws)",
-						EnvVars: []string{"WARPSTREAM_MODE"},
+						Value:   "rust",
+						Usage:   "WebSocket protocol mode (rust, ws)",
+						EnvVars: []string{"WSTUNNEL_MODE"},
 					},
 					&cli.StringFlag{
 						Name:  "jwt-secret",
@@ -304,7 +309,7 @@ func main() {
 						Aliases: []string{"prefix", "P"},
 						Value:   "v1",
 						Usage:   "HTTP upgrade path prefix",
-						EnvVars: []string{"WARPSTREAM_HTTP_UPGRADE_PATH_PREFIX"},
+						EnvVars: []string{"WSTUNNEL_HTTP_UPGRADE_PATH_PREFIX"},
 					},
 					&cli.StringFlag{
 						Name:  "http-upgrade-credentials",
@@ -344,20 +349,20 @@ func main() {
 					&cli.BoolFlag{
 						Name:    "dns-resolver-prefer-ipv4",
 						Usage:   "Prioritize IPv4 for DNS lookup",
-						EnvVars: []string{"WARPSTREAM_DNS_PREFER_IPV4"},
+						EnvVars: []string{"WSTUNNEL_DNS_PREFER_IPV4"},
 					},
 				},
 				Action: runClient,
 			},
 			{
 				Name:  "server",
-				Usage: "Run warpstream server",
+				Usage: "Run wstunnel server",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "legacy",
-						Usage:   "WebSocket protocol mode (legacy, ws)",
-						EnvVars: []string{"WARPSTREAM_MODE"},
+						Value:   "rust",
+						Usage:   "WebSocket protocol mode (rust, ws)",
+						EnvVars: []string{"WSTUNNEL_MODE"},
 					},
 					&cli.StringFlag{
 						Name:  "jwt-secret",
@@ -372,7 +377,7 @@ func main() {
 						Aliases: []string{"prefix", "P"},
 						Value:   "v1",
 						Usage:   "HTTP upgrade path prefix",
-						EnvVars: []string{"WARPSTREAM_HTTP_UPGRADE_PATH_PREFIX"},
+						EnvVars: []string{"WSTUNNEL_HTTP_UPGRADE_PATH_PREFIX"},
 					},
 					&cli.UintFlag{
 						Name:  "socket-so-mark",
@@ -395,7 +400,7 @@ func main() {
 					&cli.BoolFlag{
 						Name:    "dns-resolver-prefer-ipv4",
 						Usage:   "Prioritize IPv4 for DNS lookup",
-						EnvVars: []string{"WARPSTREAM_DNS_PREFER_IPV4"},
+						EnvVars: []string{"WSTUNNEL_DNS_PREFER_IPV4"},
 					},
 					&cli.StringSliceFlag{
 						Name:  "restrict-to",
@@ -405,7 +410,7 @@ func main() {
 						Name:    "restrict-http-upgrade-path-prefix",
 						Aliases: []string{"r"},
 						Usage:   "Restrict tunnels to specific path prefixes",
-						EnvVars: []string{"WARPSTREAM_RESTRICT_HTTP_UPGRADE_PATH_PREFIX"},
+						EnvVars: []string{"WSTUNNEL_RESTRICT_HTTP_UPGRADE_PATH_PREFIX"},
 					},
 					&cli.StringFlag{
 						Name:  "restrict-config",
@@ -432,12 +437,12 @@ func main() {
 					&cli.StringFlag{
 						Name:    "http-proxy-login",
 						Usage:   "Login for http proxy",
-						EnvVars: []string{"WARPSTREAM_HTTP_PROXY_LOGIN"},
+						EnvVars: []string{"WSTUNNEL_HTTP_PROXY_LOGIN"},
 					},
 					&cli.StringFlag{
 						Name:    "http-proxy-password",
 						Usage:   "Password for http proxy",
-						EnvVars: []string{"WARPSTREAM_HTTP_PROXY_PASSWORD"},
+						EnvVars: []string{"WSTUNNEL_HTTP_PROXY_PASSWORD"},
 					},
 					&cli.DurationFlag{
 						Name:    "remote-to-local-server-idle-timeout",

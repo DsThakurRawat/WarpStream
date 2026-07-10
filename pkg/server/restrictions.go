@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
+	"github.com/kad/wstunnel-go/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
 

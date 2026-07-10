@@ -9,7 +9,7 @@
    - Define test cases for TCP, UDP, and HTTP tunnels. Validate argument permutations: --port, --host,
    --key, --cert. Ensure coverage for TLS/SSL configurations. Measure success via exit codes and log analysis.
 [x] add mode to go version that would be RFC 6455 compliant, with a note that only go clients will be able to work in that mode.
-   add command line and config option for this mode (keep compatibility wuth legacy as a default mode of operation)
+   add command line and config option for this mode (keep compatibility wuth rust as a default mode of operation)
    **Implementation Details:**
    - **Protocol:** WebSocket (RFC 6455)
    - **Mode:** `ws`
@@ -19,7 +19,7 @@
    - **CLI Flag:** `--mode ws` for strict compliance to rfc6455 and propose good
      value for non-compliant (default) mode.
    - **Config Key:** `mode: ws`
-   - **Default Mode:** `legacy`
+   - **Default Mode:** `rust`
    - **Dependencies:** gorilla/websocket can be used, but only in cases if rfc compliant protocol. in non-complaint mode it should be using own
    implementation.
    - **Go Lib:** `gorilla/websocket`
@@ -30,13 +30,13 @@
    - **Ping/Pong:** Handle control frames
    - **Close Frame:** Proper close sequence
    - **Test Cases:** Edge cases, invalid frames
-[x] Add support for running warpstream via systemd
+[x] Add support for running wstunnel-go via systemd
    - create ssytemd template units for both client and server to use config
      files
    - Update documentation about how to use via config files with systemd units
    - Include systemd units to binary distribution archives
 [x] Add distribution packages for goreleaser target rules
-[x] Add support (scripts) for starting warpstream client on Windows via task scheduler
+[x] Add support (scripts) for starting wstunnel-go client on Windows via task scheduler
    - include install and uninstall scripts
    - include scripts to enable/disable task in task scheduler,
      start/stop/restart
@@ -45,7 +45,7 @@
    - client should not exit if connection to server got broken, it should try to
      reconnect
 [x] Caddy integration (server):
-   - consider example implementation of caddy app plugin that can be built into caddy server to allow serving warpstreams.
+   - consider example implementation of caddy app plugin that can be built into caddy server to allow serving wstunnels.
    - configuration should be able to specify "users" by path prefixes
    - for each user or groups of users it should be possible to define rules which types of tunnels will be allowed
    - for mTLS it should relay on caddy's server socket
