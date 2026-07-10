@@ -19,6 +19,7 @@ func newTestContext(t *testing.T, args []string) *cli.Context {
 	fs.Bool("websocket-mask-frame", false, "")
 	fs.Duration("websocket-ping-frequency", 30*time.Second, "")
 	fs.Bool("tls-verify-certificate", false, "")
+	fs.Bool("tls", false, "")
 	fs.String("tls-certificate", "", "")
 	fs.String("tls-private-key", "", "")
 	fs.String("tls-sni-override", "", "")
