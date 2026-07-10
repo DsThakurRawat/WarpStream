@@ -1216,6 +1216,7 @@ func (c *Client) runTProxyUdpTunnel(ltr *protocol.LocalToRemote) {
 		Control: func(network, address string, rc syscall.RawConn) error {
 			return rc.Control(func(fd uintptr) {
 				_ = socket.SetIpTransparent(fd)
+				_ = socket.SetIpRecvOrigDstAddr(fd)
 			})
 		},
 	}
@@ -1244,17 +1245,22 @@ func (c *Client) runTProxyUdpTunnel(ltr *protocol.LocalToRemote) {
 	var mu sync.Mutex
 
 	buf := make([]byte, 64*1024)
+	oob := make([]byte, 1024)
 	for {
-		n, srcAddr, err := conn.ReadFromUDP(buf)
+		n, oobn, _, srcAddrUDP, err := conn.ReadMsgUDP(buf, oob)
 		if err != nil {
 			slog.Warn("TProxy UDP read error", "err", err)
 			continue
 		}
+		srcAddr := srcAddrUDP
 
-		targetHost := ltr.Remote
-		targetPort := ltr.Port
-		if targetHost == "" || targetHost == "0.0.0.0" || targetPort == 0 {
-			targetHost, targetPort, _ = socket.GetOriginalDst(conn)
+		targetHost, targetPort, err := socket.ParseOrigDstAddr(oob[:oobn])
+		if err != nil || targetHost == "" || targetPort == 0 {
+			targetHost = ltr.Remote
+			targetPort = ltr.Port
+			if targetHost == "" || targetHost == "0.0.0.0" || targetPort == 0 {
+				targetHost, targetPort, _ = socket.GetOriginalDst(conn)
+			}
 		}
 
 		mu.Lock()

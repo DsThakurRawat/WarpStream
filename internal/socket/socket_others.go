@@ -9,3 +9,7 @@ func SetSoMark(fd uintptr, mark uint32) error {
 func SetIpTransparent(fd uintptr) error {
 	return nil
 }
+
+func SetIpRecvOrigDstAddr(fd uintptr) error {
+	return nil
+}
