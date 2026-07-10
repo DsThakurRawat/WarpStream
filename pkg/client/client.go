@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,8 +61,89 @@ type Config struct {
 }
 
 type Client struct {
-	Config Config
-	pool   *ConnectionPool
+	Config       Config
+	pool         *ConnectionPool
+	certReloader *clientCertReloader
+}
+
+// clientCertReloader wraps a server.CertReloader equivalent for the client
+// using the same atomic swap pattern: load once, expose via GetClientCertificate.
+type clientCertReloader struct {
+	certFile string
+	keyFile  string
+	mu       sync.RWMutex
+	cert     *tls.Certificate
+}
+
+func newClientCertReloader(certFile, keyFile string) (*clientCertReloader, error) {
+	r := &clientCertReloader{certFile: certFile, keyFile: keyFile}
+	if err := r.reload(); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (r *clientCertReloader) reload() error {
+	cert, err := tls.LoadX509KeyPair(r.certFile, r.keyFile)
+	if err != nil {
+		return fmt.Errorf("client cert reload: %w", err)
+	}
+	r.mu.Lock()
+	r.cert = &cert
+	r.mu.Unlock()
+	slog.Info("Successfully reloaded client TLS certificate", "cert", r.certFile)
+	return nil
+}
+
+func (r *clientCertReloader) getClientCertificate(_ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.cert == nil {
+		return nil, fmt.Errorf("no client TLS certificate loaded")
+	}
+	return r.cert, nil
+}
+
+func (r *clientCertReloader) watchFiles(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		var lastCertMod, lastKeyMod time.Time
+		for range ticker.C {
+			fi1, err1 := os.Stat(r.certFile)
+			fi2, err2 := os.Stat(r.keyFile)
+			if err1 != nil || err2 != nil {
+				continue
+			}
+			if lastCertMod.IsZero() {
+				lastCertMod = fi1.ModTime()
+				lastKeyMod = fi2.ModTime()
+				continue
+			}
+			if fi1.ModTime().After(lastCertMod) || fi2.ModTime().After(lastKeyMod) {
+				slog.Info("Detected client certificate file change, reloading...", "cert", r.certFile)
+				if err := r.reload(); err != nil {
+					slog.Error("Failed to hot-reload client certificate", "err", err)
+				} else {
+					lastCertMod = fi1.ModTime()
+					lastKeyMod = fi2.ModTime()
+				}
+			}
+		}
+	}()
+}
+
+func (r *clientCertReloader) watchSignals() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGHUP)
+	go func() {
+		for range sigChan {
+			slog.Info("Client received SIGHUP, reloading client TLS certificate...")
+			if err := r.reload(); err != nil {
+				slog.Error("Failed to reload client certificate on SIGHUP", "err", err)
+			}
+		}
+	}()
 }
 
 const legacyJWTSecret = "champignonfrais"
@@ -73,7 +155,32 @@ func NewClient(config Config) *Client {
 	if config.ConnectionMinIdle > 0 {
 		c.pool = NewConnectionPool(c, int(config.ConnectionMinIdle))
 	}
+	if config.TlsClientCert != "" && config.TlsClientKey != "" {
+		r, err := newClientCertReloader(config.TlsClientCert, config.TlsClientKey)
+		if err != nil {
+			slog.Warn("Failed to initialise client certificate reloader; mTLS may fail", "err", err)
+		} else {
+			r.watchFiles(5 * time.Second)
+			r.watchSignals()
+			c.certReloader = r
+		}
+	}
 	return c
+}
+
+// addrToHostPortParsed splits a net.Addr into host string and uint16 port.
+// Returns ("", 0, nil) when addr is nil rather than an error.
+func addrToHostPortParsed(addr net.Addr) (string, uint16, error) {
+	if addr == nil {
+		return "", 0, nil
+	}
+	host, portStr, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return "", 0, err
+	}
+	var port uint16
+	_, _ = fmt.Sscanf(portStr, "%d", &port)
+	return host, port, nil
 }
 
 func (c *Client) generateJWT(requestID string, p protocol.LocalProtocol, remoteHost string, remotePort uint16) (string, error) {
@@ -1188,10 +1295,18 @@ func (c *Client) runTProxyTcpTunnel(ltr *protocol.LocalToRemote) {
 
 		go func(netConn net.Conn) {
 			defer func() { _ = netConn.Close() }()
-			targetHost, targetPort, err := socket.GetOriginalDst(netConn)
-			if err != nil {
-				slog.Warn("TProxy TCP: failed to get original destination", "err", err)
-				return
+
+			// True TPROXY (-j TPROXY + IP_TRANSPARENT): the kernel preserves the
+			// original destination in LocalAddr(). Try that first.
+			// Fall back to SO_ORIGINAL_DST for legacy -j REDIRECT setups where
+			// LocalAddr() would point to our listener address instead.
+			targetHost, targetPort, err := addrToHostPortParsed(netConn.LocalAddr())
+			if err != nil || targetHost == "" || targetPort == 0 {
+				targetHost, targetPort, err = socket.GetOriginalDst(netConn)
+				if err != nil {
+					slog.Warn("TProxy TCP: failed to get original destination", "err", err)
+					return
+				}
 			}
 
 			tcpProto := protocol.LocalProtocol{Tcp: &protocol.TcpProtocol{ProxyProtocol: false}}
