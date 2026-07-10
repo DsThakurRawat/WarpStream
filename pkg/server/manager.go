@@ -575,6 +575,28 @@ func (m *ReverseTunnelManager) handleIncoming(tl *tunnelListener, conn net.Conn)
 	m.touchListener(tl)
 
 	slog.Info("Reverse tunnel: forwarding connection to client", "addr", tl.addr, "target_host", targetHost, "target_port", targetPort)
+
+	if tl.protocol.ReverseSocks5 != nil || tl.protocol.ReverseHttpProxy != nil {
+		frame, err := encodeTargetFrame(targetHost, targetPort)
+		if err != nil {
+			slog.Error("Reverse tunnel: failed to encode target frame", "err", err)
+			return
+		}
+		if wait.wsConn != nil {
+			if err := wait.wsConn.WriteMessage(wst.BinaryMessage, frame); err != nil {
+				return
+			}
+		} else if wait.gorillaConn != nil {
+			if err := wait.gorillaConn.WriteMessage(websocket.BinaryMessage, frame); err != nil {
+				return
+			}
+		} else {
+			if _, err := wait.h2Conn.Write(frame); err != nil {
+				return
+			}
+		}
+	}
+
 	if wait.wsConn != nil {
 		tunnel.Pipe(conn, wait.wsConn)
 	} else if wait.gorillaConn != nil {
@@ -582,6 +604,18 @@ func (m *ReverseTunnelManager) handleIncoming(tl *tunnelListener, conn net.Conn)
 	} else {
 		tunnel.PipeBiDir(conn, wait.h2Conn)
 	}
+}
+
+func encodeTargetFrame(host string, port uint16) ([]byte, error) {
+	if len(host) > 255 {
+		return nil, fmt.Errorf("host length exceeds 255 bytes")
+	}
+	frame := make([]byte, 1+1+len(host)+2)
+	frame[0] = 0x01
+	frame[1] = byte(len(host))
+	copy(frame[2:], host)
+	binary.BigEndian.PutUint16(frame[2+len(host):], port)
+	return frame, nil
 }
 
 func (m *ReverseTunnelManager) handleSocks5Handshake(conn net.Conn) (string, uint16, error) {
