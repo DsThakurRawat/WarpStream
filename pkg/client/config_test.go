@@ -148,6 +148,34 @@ func TestParseTunnelArg(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "TProxy TCP",
+			arg:       "tproxy+tcp://12345",
+			isReverse: false,
+			want: &protocol.LocalToRemote{
+				Local:  "127.0.0.1:12345",
+				Remote: "0.0.0.0",
+				Port:   0,
+				Protocol: protocol.LocalProtocol{
+					TProxyTcp: &struct{}{},
+				},
+			},
+		},
+		{
+			name:      "TProxy UDP",
+			arg:       "tproxy+udp://12345",
+			isReverse: false,
+			want: &protocol.LocalToRemote{
+				Local:  "127.0.0.1:12345",
+				Remote: "0.0.0.0",
+				Port:   0,
+				Protocol: protocol.LocalProtocol{
+					TProxyUdp: &protocol.TProxyUdpProtocol{
+						Timeout: &protocol.Duration{Secs: 30},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
