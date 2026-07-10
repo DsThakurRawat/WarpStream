@@ -1,4 +1,4 @@
-module github.com/kad/warpstream
+module github.com/DsThakurRawat/WarpStream
 
 go 1.25.0
 

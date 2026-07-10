@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/DsThakurRawat/WarpStream/pkg/protocol"
 )
 
 func TestParseTunnelArg(t *testing.T) {

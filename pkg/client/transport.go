@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kad/warpstream/internal/socket"
+	"github.com/DsThakurRawat/WarpStream/internal/socket"
 )
 
 func (c *Client) tlsClientConfig(serverName string) (*tls.Config, error) {

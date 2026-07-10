@@ -51,7 +51,7 @@ A feature-complete Go implementation of [warpstream](https://github.com/erebe/wa
 ### Build from Source
 
 ```bash
-git clone https://github.com/kad/warpstream.git
+git clone https://github.com/DsThakurRawat/WarpStream.git
 cd warpstream
 make build
 # Binary will be available in ./bin/warpstream
@@ -65,7 +65,7 @@ go build -o warpstream ./cmd/warpstream
 
 ### Download Pre-built Binaries and Packages
 
-Binaries for various platforms (Linux, macOS, Windows) and distribution packages (`.deb`, `.rpm`, `.apk`) are available on the [Releases](https://github.com/kad/warpstream/releases) page.
+Binaries for various platforms (Linux, macOS, Windows) and distribution packages (`.deb`, `.rpm`, `.apk`) are available on the [Releases](https://github.com/DsThakurRawat/WarpStream/releases) page.
 
 ### Installation via Package Manager (Linux)
 
@@ -109,7 +109,7 @@ Use the provided PowerShell scripts in the `packaging/windows` directory to regi
 
 1.  Build Caddy with `warpstream` module:
     ```bash
-    xcaddy build --with github.com/kad/warpstream/pkg/caddy
+    xcaddy build --with github.com/DsThakurRawat/WarpStream/pkg/caddy
     ```
 
 2.  Configure in `Caddyfile`:
@@ -228,8 +228,8 @@ server:
 
 ```go
 import (
-    "github.com/kad/warpstream/pkg/client"
-    "github.com/kad/warpstream/pkg/protocol"
+    "github.com/DsThakurRawat/WarpStream/pkg/client"
+    "github.com/DsThakurRawat/WarpStream/pkg/protocol"
 )
 
 func main() {

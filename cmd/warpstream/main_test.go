@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kad/warpstream/pkg/client"
-	"github.com/kad/warpstream/pkg/server"
+	"github.com/DsThakurRawat/WarpStream/pkg/client"
+	"github.com/DsThakurRawat/WarpStream/pkg/server"
 	"github.com/urfave/cli/v2"
 )
 

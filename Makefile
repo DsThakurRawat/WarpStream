@@ -60,7 +60,7 @@ verify: ## Run go mod verify
 .PHONY: build-caddy
 build-caddy: ## Build Caddy with warpstream module
 	@echo "Building Caddy with warpstream module..."
-	cd pkg/caddy && xcaddy build --with github.com/kad/warpstream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/kad/warpstream=$(CURDIR)
+	cd pkg/caddy && xcaddy build --with github.com/DsThakurRawat/WarpStream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/DsThakurRawat/WarpStream=$(CURDIR)
 
 .PHONY: check-caddy
 check-caddy: build-caddy ## Check if Caddy module is correctly registered

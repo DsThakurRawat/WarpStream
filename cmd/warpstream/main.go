@@ -10,9 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/kad/warpstream/internal/rlimit"
-	"github.com/kad/warpstream/pkg/client"
-	"github.com/kad/warpstream/pkg/server"
+	"github.com/DsThakurRawat/WarpStream/internal/rlimit"
+	"github.com/DsThakurRawat/WarpStream/pkg/client"
+	"github.com/DsThakurRawat/WarpStream/pkg/server"
 )
 
 type FullConfig struct {

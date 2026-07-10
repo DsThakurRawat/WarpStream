@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DsThakurRawat/WarpStream/pkg/protocol"
 	"github.com/gorilla/websocket"
-	"github.com/kad/warpstream/pkg/protocol"
 )
 
 func TestAuthenticateHTTPProxy(t *testing.T) {

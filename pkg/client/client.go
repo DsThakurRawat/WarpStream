@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DsThakurRawat/WarpStream/pkg/protocol"
+	"github.com/DsThakurRawat/WarpStream/pkg/tunnel"
+	"github.com/DsThakurRawat/WarpStream/pkg/wst"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/kad/warpstream/pkg/protocol"
-	"github.com/kad/warpstream/pkg/tunnel"
-	"github.com/kad/warpstream/pkg/wst"
 	"golang.org/x/net/http2"
 )
 

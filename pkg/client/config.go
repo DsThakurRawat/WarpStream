@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/DsThakurRawat/WarpStream/pkg/protocol"
 )
 
 func parseDurationSec(s string) (*protocol.Duration, error) {

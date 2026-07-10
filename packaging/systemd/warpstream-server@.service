@@ -1,6 +1,6 @@
 [Unit]
 Description=warpstream server - %I
-Documentation=https://github.com/kad/warpstream
+Documentation=https://github.com/DsThakurRawat/WarpStream
 After=network.target
 
 [Service]
