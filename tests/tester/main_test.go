@@ -19,15 +19,15 @@ var rustBinary string
 
 func init() {
 	var err error
-	rustBinary, err = exec.LookPath("wstunnel")
+	rustBinary, err = exec.LookPath("warpstream")
 	if err != nil {
-		fmt.Printf("Rust binary 'wstunnel' not found in PATH: %v\n", err)
+		fmt.Printf("Rust binary 'warpstream' not found in PATH: %v\n", err)
 		// Leave rustBinary as empty string, tests will skip if not found
 	}
 }
 
 const (
-	goBinary = "../../bin/wstunnel-go"
+	goBinary = "../../bin/warpstream"
 )
 
 type WstunnelProcess struct {
@@ -266,7 +266,7 @@ func testHTTPProxy(t *testing.T, proxyPort int, targetHost string, targetPort in
 
 func testReverseTCP(t *testing.T, listenPort int, echoServerPort int) {
 	// In reverse tunnel, the client listens on echoServerPort and forwards to server's listenPort.
-	// But in wstunnel terms, -R tcp://listenPort:localhost:echoServerPort
+	// But in warpstream terms, -R tcp://listenPort:localhost:echoServerPort
 	// means the SERVER listens on listenPort and forwards to client, which forwards to localhost:echoServerPort.
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", listenPort), 5*time.Second)
 	if err != nil {
@@ -331,7 +331,7 @@ func testUnix(t *testing.T, path string) {
 
 func TestInteroperability(t *testing.T) {
 	if rustBinary == "" { // Check if exec.LookPath found the binary
-		t.Skipf("Rust binary 'wstunnel' not found in PATH. Skipping Rust interoperability tests.")
+		t.Skipf("Rust binary 'warpstream' not found in PATH. Skipping Rust interoperability tests.")
 	}
 	if _, err := os.Stat(goBinary); os.IsNotExist(err) {
 		t.Fatalf("Go binary not found at %s. Run 'make build' first.", goBinary)

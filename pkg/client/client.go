@@ -22,9 +22,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/kad/wstunnel-go/pkg/protocol"
-	"github.com/kad/wstunnel-go/pkg/tunnel"
-	"github.com/kad/wstunnel-go/pkg/wst"
+	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/kad/warpstream/pkg/tunnel"
+	"github.com/kad/warpstream/pkg/wst"
 	"golang.org/x/net/http2"
 )
 
@@ -750,7 +750,7 @@ func (c *Client) handleHttpProxy(conn net.Conn, ltr *protocol.LocalToRemote) {
 		credentials = ltr.Protocol.HttpProxy.Credentials
 	}
 	if !authenticateHTTPProxy(req.Header.Get("Proxy-Authorization"), credentials) {
-		resp := "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"wstunnel-go\"\r\n\r\n"
+		resp := "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"warpstream\"\r\n\r\n"
 		_, _ = conn.Write([]byte(resp))
 		return
 	}

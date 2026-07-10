@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kad/wstunnel-go/pkg/protocol"
+	"github.com/kad/warpstream/pkg/protocol"
 )
 
 func parseDurationSec(s string) (*protocol.Duration, error) {
@@ -101,7 +101,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 		if isReverse {
 			ltr.Protocol = protocol.LocalProtocol{ReverseUnix: &protocol.ReverseUnixProtocol{Path: localPath}}
 			// For reverse unix, format is usually unix://local_path:remote_path
-			// but wstunnel (rust) might have different ideas.
+			// but warpstream (rust) might have different ideas.
 			// In our case, we want the server to listen on remotePath and forward to localPath.
 			if remotePath != "" {
 				ltr.Remote = remotePath // This will be used as the listen path on the server
@@ -148,7 +148,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 	case 1: // port
 		localPort = partsInfo[0]
 	case 2: // bind:port OR port:host (ambiguous, assume bind:port for dynamic, port:host if we had a way to know)
-		// wstunnel usually treats it as bind:port if it's dynamic
+		// warpstream usually treats it as bind:port if it's dynamic
 		localBind = partsInfo[0]
 		localPort = partsInfo[1]
 	case 3: // port:host:port
