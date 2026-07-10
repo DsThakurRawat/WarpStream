@@ -17,8 +17,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/DsThakurRawat/WarpStream/internal/socket"
 	"github.com/DsThakurRawat/WarpStream/pkg/protocol"
 	"github.com/DsThakurRawat/WarpStream/pkg/tunnel"
 	"github.com/DsThakurRawat/WarpStream/pkg/wst"
@@ -460,6 +462,16 @@ func (c *Client) StartTunnel(ltr *protocol.LocalToRemote) {
 		return
 	}
 
+	if ltr.Protocol.TProxyTcp != nil {
+		c.runTProxyTcpTunnel(ltr)
+		return
+	}
+
+	if ltr.Protocol.TProxyUdp != nil {
+		c.runTProxyUdpTunnel(ltr)
+		return
+	}
+
 	c.runTcpTunnel(ltr)
 }
 
@@ -777,11 +789,6 @@ func (c *Client) handleHttpProxy(conn net.Conn, ltr *protocol.LocalToRemote) {
 }
 
 func (c *Client) StartReverseTunnel(ltr *protocol.LocalToRemote) {
-	if ltr.Protocol.ReverseUdp != nil || ltr.Protocol.ReverseSocks5 != nil || ltr.Protocol.ReverseHttpProxy != nil {
-		slog.Error("Reverse tunnel protocol is not implemented", "protocol", ltr.Protocol)
-		return
-	}
-
 	maxDelay := c.Config.ReverseTunnelConnectionRetryMaxBackoff
 	if maxDelay == 0 {
 		maxDelay = 10 * time.Second
@@ -1088,5 +1095,200 @@ func (c *Client) startPipeRWC(rwc io.ReadWriteCloser, ts *tunnelStream) {
 		tunnel.PipeGorillaRW(rwc, ts.gorilla)
 	} else {
 		tunnel.PipeBiDir(rwc, ts.h2)
+	}
+}
+
+func (c *Client) runTProxyTcpTunnel(ltr *protocol.LocalToRemote) {
+	lc := net.ListenConfig{
+		Control: func(network, address string, rc syscall.RawConn) error {
+			return rc.Control(func(fd uintptr) {
+				_ = socket.SetIpTransparent(fd)
+			})
+		},
+	}
+	listener, err := lc.Listen(context.Background(), "tcp", ltr.Local)
+	if err != nil {
+		slog.Error("TProxy TCP: failed to listen", "local", ltr.Local, "err", err)
+		return
+	}
+	defer func() { _ = listener.Close() }()
+
+	slog.Info("TProxy TCP Listener started", "local", ltr.Local, "server", c.Config.ServerURL)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			slog.Warn("TProxy TCP: accept error", "err", err)
+			continue
+		}
+
+		go func(netConn net.Conn) {
+			defer func() { _ = netConn.Close() }()
+			targetHost, targetPort, err := socket.GetOriginalDst(netConn)
+			if err != nil {
+				slog.Warn("TProxy TCP: failed to get original destination", "err", err)
+				return
+			}
+
+			tcpProto := protocol.LocalProtocol{Tcp: &protocol.TcpProtocol{ProxyProtocol: false}}
+			ts := c.connectToTransport(tcpProto, targetHost, targetPort)
+			if ts.err != nil {
+				slog.Error("Failed to connect to transport for TProxy TCP", "err", ts.err)
+				return
+			}
+			c.startPipe(netConn, ts)
+		}(conn)
+	}
+}
+
+func (c *Client) runTProxyUdpTunnel(ltr *protocol.LocalToRemote) {
+	addr, err := net.ResolveUDPAddr("udp", ltr.Local)
+	if err != nil {
+		slog.Error("TProxy UDP: invalid address", "local", ltr.Local, "err", err)
+		return
+	}
+
+	lc := net.ListenConfig{
+		Control: func(network, address string, rc syscall.RawConn) error {
+			return rc.Control(func(fd uintptr) {
+				_ = socket.SetIpTransparent(fd)
+			})
+		},
+	}
+
+	pc, err := lc.ListenPacket(context.Background(), "udp", addr.String())
+	if err != nil {
+		slog.Error("TProxy UDP: failed to listen", "local", ltr.Local, "err", err)
+		return
+	}
+	conn, ok := pc.(*net.UDPConn)
+	if !ok {
+		_ = pc.Close()
+		return
+	}
+	defer func() { _ = conn.Close() }()
+
+	slog.Info("TProxy UDP Listener started", "local", ltr.Local)
+
+	timeoutDuration := 30 * time.Second
+	if ltr.Protocol.TProxyUdp != nil && ltr.Protocol.TProxyUdp.Timeout != nil && ltr.Protocol.TProxyUdp.Timeout.Secs > 0 {
+		timeoutDuration = time.Duration(ltr.Protocol.TProxyUdp.Timeout.Secs) * time.Second
+	}
+
+	clients := make(map[string]*tunnelStream)
+	timers := make(map[string]*time.Timer)
+	var mu sync.Mutex
+
+	buf := make([]byte, 64*1024)
+	for {
+		n, srcAddr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			slog.Warn("TProxy UDP read error", "err", err)
+			continue
+		}
+
+		targetHost := ltr.Remote
+		targetPort := ltr.Port
+		if targetHost == "" || targetHost == "0.0.0.0" || targetPort == 0 {
+			targetHost, targetPort, _ = socket.GetOriginalDst(conn)
+		}
+
+		mu.Lock()
+		ts, ok := clients[srcAddr.String()]
+		if !ok {
+			udpProto := protocol.LocalProtocol{Udp: &protocol.UdpProtocol{Timeout: ltr.Protocol.TProxyUdp.Timeout}}
+			ts = c.connectToTransport(udpProto, targetHost, targetPort)
+			if ts.err != nil {
+				slog.Error("Failed to connect to transport for TProxy UDP", "err", ts.err)
+				mu.Unlock()
+				continue
+			}
+			clients[srcAddr.String()] = ts
+
+			timer := time.AfterFunc(timeoutDuration, func() {
+				mu.Lock()
+				defer mu.Unlock()
+				if stream, exists := clients[srcAddr.String()]; exists {
+					stream.Close()
+					delete(clients, srcAddr.String())
+				}
+				delete(timers, srcAddr.String())
+			})
+			timers[srcAddr.String()] = timer
+
+			go func(ts *tunnelStream, dest *net.UDPAddr) {
+				defer func() {
+					mu.Lock()
+					delete(clients, dest.String())
+					if t, found := timers[dest.String()]; found {
+						t.Stop()
+						delete(timers, dest.String())
+					}
+					mu.Unlock()
+					ts.Close()
+				}()
+
+				if ts.ws != nil {
+					for {
+						messageType, p, err := ts.ws.ReadMessage()
+						if err != nil {
+							return
+						}
+						mu.Lock()
+						if t, found := timers[dest.String()]; found {
+							t.Reset(timeoutDuration)
+						}
+						mu.Unlock()
+						if messageType == wst.BinaryMessage {
+							_, _ = conn.WriteToUDP(p, dest)
+						}
+					}
+				} else if ts.gorilla != nil {
+					for {
+						messageType, p, err := ts.gorilla.ReadMessage()
+						if err != nil {
+							return
+						}
+						mu.Lock()
+						if t, found := timers[dest.String()]; found {
+							t.Reset(timeoutDuration)
+						}
+						mu.Unlock()
+						if messageType == websocket.BinaryMessage {
+							_, _ = conn.WriteToUDP(p, dest)
+						}
+					}
+				} else if ts.h2 != nil {
+					buf2 := make([]byte, 64*1024)
+					for {
+						n, err := ts.h2.Read(buf2)
+						if err != nil {
+							return
+						}
+						mu.Lock()
+						if t, found := timers[dest.String()]; found {
+							t.Reset(timeoutDuration)
+						}
+						mu.Unlock()
+						if n > 0 {
+							_, _ = conn.WriteToUDP(buf2[:n], dest)
+						}
+					}
+				}
+			}(ts, srcAddr)
+		} else {
+			if timer, exists := timers[srcAddr.String()]; exists {
+				timer.Reset(timeoutDuration)
+			}
+		}
+		mu.Unlock()
+
+		if ts.ws != nil {
+			_ = ts.ws.WriteMessage(wst.BinaryMessage, buf[:n])
+		} else if ts.gorilla != nil {
+			_ = ts.gorilla.WriteMessage(websocket.BinaryMessage, buf[:n])
+		} else {
+			_, _ = ts.h2.Write(buf[:n])
+		}
 	}
 }
