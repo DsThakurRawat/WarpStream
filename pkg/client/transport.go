@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kad/wstunnel-go/internal/socket"
+	"github.com/kad/warpstream/internal/socket"
 )
 
 func (c *Client) tlsClientConfig(serverName string) (*tls.Config, error) {
@@ -92,7 +92,7 @@ func (c *Client) dialTransport(ctx context.Context, network, addr string) (net.C
 
 		// Wrap the TLS handshake with the same timeout as TCP connect to prevent
 		// connection pool exhaustion when servers accept TCP but never complete
-		// the TLS handshake (see upstream wstunnel issue #516)
+		// the TLS handshake (see upstream warpstream issue #516)
 		handshakeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 

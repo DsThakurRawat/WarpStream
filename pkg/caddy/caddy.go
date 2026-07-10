@@ -7,7 +7,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/kad/wstunnel-go/pkg/server"
+	"github.com/kad/warpstream/pkg/server"
 	"go.uber.org/zap"
 )
 
@@ -15,9 +15,9 @@ func init() {
 	caddy.RegisterModule(Wstunnel{})
 }
 
-// Wstunnel is a Caddy module that allows serving wstunnels.
+// Wstunnel is a Caddy module that allows serving warpstreams.
 type Wstunnel struct {
-	// The configuration for the wstunnel server.
+	// The configuration for the warpstream server.
 	Config server.Config `json:"config,omitempty"`
 
 	// Inline restrictions.
@@ -30,7 +30,7 @@ type Wstunnel struct {
 // CaddyModule returns the Caddy module information.
 func (Wstunnel) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.handlers.wstunnel",
+		ID:  "http.handlers.warpstream",
 		New: func() caddy.Module { return new(Wstunnel) },
 	}
 }
@@ -60,9 +60,9 @@ func (w *Wstunnel) Provision(ctx caddy.Context) error {
 
 // ServeHTTP implements caddyhttp.Handler.
 func (w *Wstunnel) ServeHTTP(rw http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	// wstunnel-go server handles path prefix checking if configured.
+	// warpstream server handles path prefix checking if configured.
 
-	// We want to detect if this is potentially a wstunnel request.
+	// We want to detect if this is potentially a warpstream request.
 	// It's either a WebSocket upgrade or an HTTP/2 POST (for h2 transport).
 
 	isWebsocket := strings.ToLower(r.Header.Get("Upgrade")) == "websocket"
@@ -86,7 +86,7 @@ func (w *Wstunnel) ServeHTTP(rw http.ResponseWriter, r *http.Request, next caddy
 
 // UnmarshalCaddyfile sets up the handler from Caddyfile tokens.
 //
-//	wstunnel {
+//	warpstream {
 //	    mode ws|rust
 //	    prefix /v1
 //	    restrict_config /path/to/rules.yaml

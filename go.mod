@@ -1,4 +1,4 @@
-module github.com/kad/wstunnel-go
+module github.com/kad/warpstream
 
 go 1.25.0
 

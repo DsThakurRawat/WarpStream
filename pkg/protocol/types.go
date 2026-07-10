@@ -87,7 +87,7 @@ type Credentials struct {
 }
 
 // String redacts the password to prevent credential leakage in logs
-// (see upstream wstunnel issue #520)
+// (see upstream warpstream issue #520)
 func (c Credentials) String() string {
 	if c.Password != "" {
 		return fmt.Sprintf("Credentials{Username: %q, Password: <redacted>}", c.Username)

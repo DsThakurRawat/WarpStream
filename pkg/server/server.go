@@ -20,10 +20,10 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	"github.com/kad/wstunnel-go/internal/socket"
-	"github.com/kad/wstunnel-go/pkg/protocol"
-	"github.com/kad/wstunnel-go/pkg/tunnel"
-	"github.com/kad/wstunnel-go/pkg/wst"
+	"github.com/kad/warpstream/internal/socket"
+	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/kad/warpstream/pkg/tunnel"
+	"github.com/kad/warpstream/pkg/wst"
 	"golang.org/x/net/http2"
 )
 

@@ -1,18 +1,18 @@
 [Unit]
-Description=wstunnel-go server - %I
-Documentation=https://github.com/kad/wstunnel-go
+Description=warpstream server - %I
+Documentation=https://github.com/kad/warpstream
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/wstunnel-go server --config /etc/wstunnel-go/%i.yaml
+ExecStart=/usr/bin/warpstream server --config /etc/warpstream/%i.yaml
 Restart=always
 RestartSec=5
 # Allow binding to privileged ports
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 # Security Hardening
-ReadOnlyPaths=/etc/wstunnel-go
+ReadOnlyPaths=/etc/warpstream
 ProtectSystem=full
 ProtectHome=true
 PrivateTmp=true

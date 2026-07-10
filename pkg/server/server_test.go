@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/kad/wstunnel-go/pkg/protocol"
+	"github.com/kad/warpstream/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
 

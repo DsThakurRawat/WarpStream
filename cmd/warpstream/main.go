@@ -10,9 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/kad/wstunnel-go/internal/rlimit"
-	"github.com/kad/wstunnel-go/pkg/client"
-	"github.com/kad/wstunnel-go/pkg/server"
+	"github.com/kad/warpstream/internal/rlimit"
+	"github.com/kad/warpstream/pkg/client"
+	"github.com/kad/warpstream/pkg/server"
 )
 
 type FullConfig struct {
@@ -195,8 +195,8 @@ func applyServerFlagOverrides(c *cli.Context, config *server.Config, listenAddr 
 func main() {
 	rlimit.RaiseFdLimit()
 	app := &cli.App{
-		Name:                   "wstunnel-go",
-		Usage:                  "A Go client/server for wstunnel",
+		Name:                   "warpstream",
+		Usage:                  "A Go client/server for warpstream",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -228,7 +228,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "client",
-				Usage: "Run wstunnel client",
+				Usage: "Run warpstream client",
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
 						Name:    "local-to-remote",
@@ -356,7 +356,7 @@ func main() {
 			},
 			{
 				Name:  "server",
-				Usage: "Run wstunnel server",
+				Usage: "Run warpstream server",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "mode",

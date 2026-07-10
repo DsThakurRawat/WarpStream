@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kad/wstunnel-go/pkg/protocol"
+	"github.com/kad/warpstream/pkg/protocol"
 )
 
 func TestParseTunnelArg(t *testing.T) {

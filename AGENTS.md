@@ -1,6 +1,6 @@
 # AGENTS.md - Project Rules and Conventions
 
-This document outlines the established rules, conventions, and processes for the `wstunnel-go` project. It serves as a guide for both human developers and AI agents to ensure consistency, quality, and efficient development.
+This document outlines the established rules, conventions, and processes for the `warpstream` project. It serves as a guide for both human developers and AI agents to ensure consistency, quality, and efficient development.
 
 ## 1. Go Version
 
@@ -9,7 +9,7 @@ The project targets **Go version 1.25** or above. This is specified in the `go.m
 ## 2. Project Structure
 
 The project follows a standard Go project layout:
--   `cmd/wstunnel-go/main.go`: Contains the main application entry point.
+-   `cmd/warpstream/main.go`: Contains the main application entry point.
 -   `pkg/`: Contains internal packages for client, server, protocol, and tunnel logic.
 -   `internal/`: Contains internal packages shared between `cmd` and `pkg`.
 -   `tests/tester/`: Contains the interoperability testing tool.
@@ -25,16 +25,16 @@ Dependencies are managed using Go Modules.
 The `Makefile` provides convenient targets for common development tasks:
 
 -   `all`: (Default) Builds the application. Equivalent to `make build`.
--   `build`: Compiles the `wstunnel-go` binary and places it in the `./bin` directory.
+-   `build`: Compiles the `warpstream` binary and places it in the `./bin` directory.
 -   `test`: Runs all unit and integration tests with verbose output and race detection (`go test -v -race ./...`).
--   `test-interop`: Runs end-to-end interoperability tests between `wstunnel-go` and the original Rust `wstunnel` implementation.
+-   `test-interop`: Runs end-to-end interoperability tests between `warpstream` and the original Rust `warpstream` implementation.
 -   `lint`: Executes `golangci-lint` to analyze the codebase for potential issues.
 -   `vet`: Runs `go vet` for static analysis.
 -   `fmt`: Formats all Go source files using `go fmt`.
 -   `tidy`: Organizes Go module dependencies (`go mod tidy`).
 -   `verify`: Verifies the integrity of module dependencies (`go mod verify`).
 -   `install-tools`: Installs development tools like `golangci-lint` and `goreleaser` locally using `go install`.
--   `clean`: Removes build artifacts, including the `wstunnel-go` binary and any other temporary files.
+-   `clean`: Removes build artifacts, including the `warpstream` binary and any other temporary files.
 -   `goreleaser-test`: Tests the `goreleaser` configuration locally without publishing a release (`goreleaser release --snapshot --skip=publish --clean`).
 -   `help`: Displays a list of available `Makefile` targets and their descriptions.
 
@@ -52,9 +52,9 @@ The project uses `golangci-lint` for static code analysis.
 -   **CI Integration:** These tests are automatically executed in the CI workflow.
 
 ### Interoperability Testing
--   **Purpose:** To validate compatibility with the original Rust `wstunnel` implementation.
+-   **Purpose:** To validate compatibility with the original Rust `warpstream` implementation.
 -   **Execution:** Run `make test-interop`.
--   **Requirements:** Requires the Rust `wstunnel` binary to be available on the system `PATH` under the name `wstunnel` (tests will be skipped if it is not found).
+-   **Requirements:** Requires the Rust `warpstream` binary to be available on the system `PATH` under the name `warpstream` (tests will be skipped if it is not found).
 -   **Scope:** Tests various client/server combinations (Go-Go, Go-Rust, Rust-Go) across both WebSocket and HTTP/2 transports.
 
 ## 7. GitHub Workflows

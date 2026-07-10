@@ -1,8 +1,8 @@
-# wstunnel-go
+# warpstream
 
-A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstunnel), designed for high performance, ease of use, and library integration.
+A feature-complete Go implementation of [warpstream](https://github.com/erebe/warpstream), designed for high performance, ease of use, and library integration.
 
-`wstunnel-go` allows you to tunnel any traffic through a WebSocket or HTTP/2 connection, effectively bypassing restrictive firewalls and proxies that only allow HTTP/HTTPS traffic.
+`warpstream` allows you to tunnel any traffic through a WebSocket or HTTP/2 connection, effectively bypassing restrictive firewalls and proxies that only allow HTTP/HTTPS traffic.
 
 ## Features
 
@@ -51,53 +51,53 @@ A feature-complete Go implementation of [wstunnel](https://github.com/erebe/wstu
 ### Build from Source
 
 ```bash
-git clone https://github.com/kad/wstunnel-go.git
-cd wstunnel-go
+git clone https://github.com/kad/warpstream.git
+cd warpstream
 make build
-# Binary will be available in ./bin/wstunnel-go
+# Binary will be available in ./bin/warpstream
 ```
 
 Alternatively, using standard Go commands:
 
 ```bash
-go build -o wstunnel-go ./cmd/wstunnel-go
+go build -o warpstream ./cmd/warpstream
 ```
 
 ### Download Pre-built Binaries and Packages
 
-Binaries for various platforms (Linux, macOS, Windows) and distribution packages (`.deb`, `.rpm`, `.apk`) are available on the [Releases](https://github.com/kad/wstunnel-go/releases) page.
+Binaries for various platforms (Linux, macOS, Windows) and distribution packages (`.deb`, `.rpm`, `.apk`) are available on the [Releases](https://github.com/kad/warpstream/releases) page.
 
 ### Installation via Package Manager (Linux)
 
 For Debian/Ubuntu-based systems:
 ```bash
-sudo dpkg -i wstunnel-go_amd64.deb
+sudo dpkg -i warpstream_amd64.deb
 ```
 
 ### Systemd Integration (Linux)
 
-`wstunnel-go` provides systemd template units for easy management of client and server instances.
+`warpstream` provides systemd template units for easy management of client and server instances.
 
-1.  Place your configuration YAML file in `/etc/wstunnel-go/client-myserver.yaml`.
+1.  Place your configuration YAML file in `/etc/warpstream/client-myserver.yaml`.
 2.  Enable and start the service:
     ```bash
-    sudo systemctl enable --now wstunnel-go-client@myserver
+    sudo systemctl enable --now warpstream-client@myserver
     ```
 
 For the server:
-1.  Place your configuration YAML file in `/etc/wstunnel-go/server-main.yaml`.
+1.  Place your configuration YAML file in `/etc/warpstream/server-main.yaml`.
 2.  Enable and start the service:
     ```bash
-    sudo systemctl enable --now wstunnel-go-server@main
+    sudo systemctl enable --now warpstream-server@main
     ```
 
 ### Windows Task Scheduler Integration
 
-Use the provided PowerShell scripts in the `packaging/windows` directory to register `wstunnel-go` as a background task.
+Use the provided PowerShell scripts in the `packaging/windows` directory to register `warpstream` as a background task.
 
 ```powershell
 # In an elevated PowerShell session:
-.\packaging\windows\install.ps1 -ConfigPath "C:\path\to\your\client.yaml" -BinaryPath "C:\path\to\wstunnel-go.exe"
+.\packaging\windows\install.ps1 -ConfigPath "C:\path\to\your\client.yaml" -BinaryPath "C:\path\to\warpstream.exe"
 
 # Control the task:
 .\packaging\windows\control.ps1 -Action start
@@ -105,68 +105,68 @@ Use the provided PowerShell scripts in the `packaging/windows` directory to regi
 
 ### Caddy Integration (Server)
 
-`wstunnel-go` can be built into Caddy server as an HTTP handler.
+`warpstream` can be built into Caddy server as an HTTP handler.
 
-1.  Build Caddy with `wstunnel-go` module:
+1.  Build Caddy with `warpstream` module:
     ```bash
-    xcaddy build --with github.com/kad/wstunnel-go/pkg/caddy
+    xcaddy build --with github.com/kad/warpstream/pkg/caddy
     ```
 
 2.  Configure in `Caddyfile`:
     ```caddyfile
     {
-        order wstunnel before reverse_proxy
+        order warpstream before reverse_proxy
     }
 
     example.com {
-        route /wstunnel/* {
-            wstunnel {
-                prefix /wstunnel
+        route /warpstream/* {
+            warpstream {
+                prefix /warpstream
                 mode rust
-                # restrict_config /etc/wstunnel/rules.yaml
+                # restrict_config /etc/warpstream/rules.yaml
             }
         }
     }
     ```
 
-`wstunnel-go` in Caddy automatically leverages Caddy's TLS termination, including mTLS.
+`warpstream` in Caddy automatically leverages Caddy's TLS termination, including mTLS.
 
 ## Usage
 
 ### Client Mode
 
-`wstunnel-go` provides a CLI that mirrors the original tool's arguments.
+`warpstream` provides a CLI that mirrors the original tool's arguments.
 
 ```bash
 # Forward local SOCKS5 to remote server
-wstunnel-go client -L socks5://127.0.0.1:1080 wss://my-server.com
+warpstream client -L socks5://127.0.0.1:1080 wss://my-server.com
 
 # Forward local port to remote destination
-wstunnel-go client -L tcp://8080:google.com:443 wss://my-server.com
+warpstream client -L tcp://8080:google.com:443 wss://my-server.com
 
 # Reverse tunnel: remote server port 8080 forwards to local 127.0.0.1:80
-wstunnel-go client -R tcp://8080:127.0.0.1:80 wss://my-server.com
+warpstream client -R tcp://8080:127.0.0.1:80 wss://my-server.com
 
 # Use HTTP/2 transport
-wstunnel-go client -L tcp://8080:google.com:443 https://my-server.com
+warpstream client -L tcp://8080:google.com:443 https://my-server.com
 
 # Use custom DNS resolver and prefer IPv4
-wstunnel-go client --dns-resolver 8.8.8.8 --dns-resolver-prefer-ipv4 -L tcp://8080:google.com:443 wss://my-server.com
+warpstream client --dns-resolver 8.8.8.8 --dns-resolver-prefer-ipv4 -L tcp://8080:google.com:443 wss://my-server.com
 ```
 
 ### Server Mode
 
 ```bash
 # Start a basic server listening on port 8080
-wstunnel-go server ws://0.0.0.0:8080
+warpstream server ws://0.0.0.0:8080
 
 # Start server with mTLS and restriction rules
-wstunnel-go server --tls-certificate cert.pem --tls-private-key key.pem --tls-client-ca-certs ca.pem --restrict-config rules.yaml
+warpstream server --tls-certificate cert.pem --tls-private-key key.pem --tls-client-ca-certs ca.pem --restrict-config rules.yaml
 ```
 
 ## Configuration
 
-`wstunnel-go` can be configured via command-line flags, environment variables, or a YAML configuration file.
+`warpstream` can be configured via command-line flags, environment variables, or a YAML configuration file.
 
 ### CLI Flags
 
@@ -219,17 +219,17 @@ client:
     - "socks5://127.0.0.1:1080"
 server:
   listen_addr: ws://0.0.0.0:8080
-  restrict_config: /etc/wstunnel/rules.yaml
+  restrict_config: /etc/warpstream/rules.yaml
 ```
 
 ## API Reference (Library Usage)
 
-`wstunnel-go` is built with a modular design, making it easy to use as a library.
+`warpstream` is built with a modular design, making it easy to use as a library.
 
 ```go
 import (
-    "github.com/kad/wstunnel-go/pkg/client"
-    "github.com/kad/wstunnel-go/pkg/protocol"
+    "github.com/kad/warpstream/pkg/client"
+    "github.com/kad/warpstream/pkg/protocol"
 )
 
 func main() {
@@ -249,7 +249,7 @@ func main() {
 
 ## Status & Interoperability
 
-`wstunnel-go` aims for 100% parity with the [Rust version](https://github.com/erebe/wstunnel).
+`warpstream` aims for 100% parity with the [Rust version](https://github.com/erebe/warpstream).
 
 | Feature | Status | Interop (Rust) |
 | :--- | :---: | :---: |
@@ -270,7 +270,7 @@ func main() {
 
 ### Performance Metrics
 
-| Metric | wstunnel (Rust) | wstunnel-go |
+| Metric | warpstream (Rust) | warpstream |
 | :--- | :---: | :---: |
 | Throughput (TCP) | ~ Gbps | ~ Gbps |
 | Latency Overhead | < 1ms | < 1ms |
@@ -280,7 +280,7 @@ func main() {
 
 ### Compatibility Versions
 
--   **Rust wstunnel**: v9.0.0+
+-   **Rust warpstream**: v9.0.0+
 -   **Go**: 1.25+
 
 ## Contributing
