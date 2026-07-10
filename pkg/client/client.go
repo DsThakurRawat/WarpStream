@@ -602,11 +602,9 @@ func (c *Client) handleSocks5(conn net.Conn, credentials *protocol.Credentials) 
 		if _, err := io.ReadFull(conn, buf[:plen]); err != nil {
 			return "", 0, err
 		}
-		password := string(buf[:plen])
-
 		status := byte(0x00)
 		if !constantTimeEqualBytes([]byte(username), []byte(credentials.Username)) ||
-			!constantTimeEqualBytes([]byte(password), []byte(credentials.Password)) {
+			!constantTimeEqualBytes(buf[:plen], []byte(credentials.Password)) {
 			status = 0x01
 		}
 		if _, err := conn.Write([]byte{0x01, status}); err != nil {
