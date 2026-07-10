@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type CertReloader struct {
@@ -48,6 +49,36 @@ func (r *CertReloader) GetCertificate(info *tls.ClientHelloInfo) (*tls.Certifica
 		return nil, fmt.Errorf("no TLS certificate loaded")
 	}
 	return r.cert, nil
+}
+
+func (r *CertReloader) WatchFiles(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		var lastCertMod, lastKeyMod time.Time
+		for range ticker.C {
+			certFi, err1 := os.Stat(r.certFile)
+			keyFi, err2 := os.Stat(r.keyFile)
+			if err1 != nil || err2 != nil {
+				continue
+			}
+			if lastCertMod.IsZero() {
+				lastCertMod = certFi.ModTime()
+				lastKeyMod = keyFi.ModTime()
+				continue
+			}
+			if certFi.ModTime().After(lastCertMod) || keyFi.ModTime().After(lastKeyMod) {
+				slog.Info("Detected certificate file change, reloading TLS certificate...", "cert", r.certFile, "key", r.keyFile)
+				if err := r.Reload(); err != nil {
+					slog.Error("Failed to reload TLS certificate on file change", "err", err)
+				} else {
+					lastCertMod = certFi.ModTime()
+					lastKeyMod = keyFi.ModTime()
+				}
+			}
+		}
+	}()
 }
 
 func (r *CertReloader) WatchSignals() {
