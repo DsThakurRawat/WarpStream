@@ -1,8 +1,8 @@
-# Makefile for warpstream
+# Makefile for wstunnel-go
 
 # Variables
 GO_VERSION ?= 1.25
-APP_NAME ?= warpstream
+APP_NAME ?= wstunnel-go
 BIN_DIR ?= ./bin
 GO_BUILD_LDFLAGS ?= -ldflags="-s -w"
 
@@ -19,6 +19,11 @@ build: ## Build the binary
 test: ## Run tests
 	@echo "Running tests..."
 	go test -v -race ./...
+
+.PHONY: test-interop
+test-interop: build ## Run interoperability tests with original Rust wstunnel
+	@echo "Running interoperability tests..."
+	go test -v ./tests/tester/...
 
 .PHONY: lint
 lint: ## Run linter
@@ -53,13 +58,13 @@ verify: ## Run go mod verify
 
 
 .PHONY: build-caddy
-build-caddy: ## Build Caddy with warpstream module
-	@echo "Building Caddy with warpstream module..."
-	cd pkg/caddy && xcaddy build --with github.com/divyansh-rawat/warpstream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/divyansh-rawat/warpstream=$(CURDIR)
+build-caddy: ## Build Caddy with wstunnel-go module
+	@echo "Building Caddy with wstunnel-go module..."
+	cd pkg/caddy && xcaddy build --with github.com/kad/wstunnel-go/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/kad/wstunnel-go=$(CURDIR)
 
 .PHONY: check-caddy
 check-caddy: build-caddy ## Check if Caddy module is correctly registered
-	./pkg/caddy/caddy list-modules | grep warpstream
+	./pkg/caddy/caddy list-modules | grep wstunnel
 
 .PHONY: tag
 tag: ## Create annotated tags (e.g., make tag VERSION=0.0.1)

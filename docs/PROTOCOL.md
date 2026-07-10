@@ -1,7 +1,7 @@
-# warpstream Protocol Technical Specification
+# wstunnel Protocol Technical Specification
 
 ## Overview
-`warpstream` is a tunneling protocol designed to encapsulate arbitrary layered-4 traffic (TCP, UDP, SOCKS5, HTTP Proxy, Unix Sockets) within a WebSocket or HTTP/2 transport stream. Its primary purpose is to bypass restrictive firewalls and Deep Packet Inspection (DPI) systems by making the tunneled traffic appear as standard web traffic.
+`wstunnel` is a tunneling protocol designed to encapsulate arbitrary layered-4 traffic (TCP, UDP, SOCKS5, HTTP Proxy, Unix Sockets) within a WebSocket or HTTP/2 transport stream. Its primary purpose is to bypass restrictive firewalls and Deep Packet Inspection (DPI) systems by making the tunneled traffic appear as standard web traffic.
 
 ## Transport Layer
 
@@ -22,7 +22,7 @@ Alternatively, the protocol supports HTTP/2 as a transport mechanism, utilizing 
 The tunnel configuration is transmitted during the HTTP Upgrade handshake.
 
 #### Custom Handshake Header:
-Instead of a separate control plane, `warpstream` encodes the tunnel instructions within the `Sec-WebSocket-Protocol` header.
+Instead of a separate control plane, `wstunnel` encodes the tunnel instructions within the `Sec-WebSocket-Protocol` header.
 - **Format:** `Sec-WebSocket-Protocol: v1, authorization.bearer.<JWT_TOKEN>`
 - **Subprotocol:** The version is fixed to `v1`.
 - **JWT Claims:** The configuration is a base64-encoded JWT containing:
@@ -36,11 +36,11 @@ Once the handshake is complete, the WebSocket becomes a raw pipe. Every byte rec
 
 ## Non-Standard Aspects (RFC Deviations)
 
-To improve performance and bypass certain DPI heuristics, `warpstream` intentionally deviates from RFC 6455 in several ways:
+To improve performance and bypass certain DPI heuristics, `wstunnel` intentionally deviates from RFC 6455 in several ways:
 
 ### 1. Relaxed Client Masking
 RFC 6455 Section 5.1 requires that all frames sent from a client to a server must be masked.
-- **Deviation:** The `warpstream` server implementation is permissive and **accepts unmasked frames** from the client.
+- **Deviation:** The `wstunnel` server implementation is permissive and **accepts unmasked frames** from the client.
 - **Implementation:** The Go implementation (`pkg/wst`) reads the mask bit but does not reject the frame if the bit is 0.
 
 ### 2. Zero-Key Masking (Transparent Masking)
@@ -55,12 +55,12 @@ RFC 6455 Section 5.1 requires that all frames sent from a client to a server mus
 ### Handshake Sequence
 1.  **Client Dial:** Performs a TCP/TLS connection to the server.
 2.  **Handshake:** Sends a `GET` request with `Upgrade: websocket` and the `Sec-WebSocket-Protocol` containing the JWT.
-3.  **Server Upgrade:** In `--mode ws`, validates the JWT when a shared secret is configured and otherwise parses an `HS256`-shaped token for compatibility. In `--mode legacy`, it parses an `HS256`-shaped token without signature verification to remain wire-compatible with the Legacy implementation, then responds with `HTTP/1.1 101 Switching Protocols`.
-4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `warpstream::tunnel::transport::io` (Legacy) logic.
+3.  **Server Upgrade:** In `--mode ws`, validates the JWT when a shared secret is configured and otherwise parses an `HS256`-shaped token for compatibility. In `--mode rust`, it parses an `HS256`-shaped token without signature verification to remain wire-compatible with the Rust implementation, then responds with `HTTP/1.1 101 Switching Protocols`.
+4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `wstunnel::tunnel::transport::io` (Rust) logic.
 
 ### Security Considerations
 - **JWT Secrets:** The implementation supports a shared secret (`--jwt-secret`) for signing client tunnel requests and for verifying server-side tunnel JWTs in `--mode ws`.
-- **Legacy Compatibility:** In `--mode legacy`, the server parses `HS256` tunnel JWTs without signature verification so it remains compatible with the original Legacy framing behavior.
+- **Rust Compatibility:** In `--mode rust`, the server parses `HS256` tunnel JWTs without signature verification so it remains compatible with the original Rust framing behavior.
 - **Compatibility Mode:** In `--mode ws`, `--insecure-no-jwt-validation` allows `HS256` tunnel JWTs to be parsed without signature verification after validation would otherwise fail.
 
 ### Connection Management
@@ -80,13 +80,13 @@ The protocol supports the following inner protocols via the `p` claim:
 
 ### Client Configuration (Go)
 ```bash
-warpstream client -L tcp://1212:google.com:443 --jwt-secret mysecret ws://server:8080
+wstunnel-go client -L tcp://1212:google.com:443 --jwt-secret mysecret ws://server:8080
 ```
 
 ### Server Configuration (Go)
 ```bash
-warpstream server ws://0.0.0.0:8080 --jwt-secret mysecret
+wstunnel-go server ws://0.0.0.0:8080 --jwt-secret mysecret
 ```
 
 ## Testing
-Interoperability is verified via `tests/tester/main_test.go`, which runs a matrix of Go-Go, Go-Legacy, and Legacy-Go combinations, ensuring that the custom `pkg/wst` layer correctly handles the non-standard framing expected by the Legacy implementation.
+Interoperability is verified via `tests/tester/main_test.go`, which runs a matrix of Go-Go, Go-Rust, and Rust-Go combinations, ensuring that the custom `pkg/wst` layer correctly handles the non-standard framing expected by the Rust implementation.
