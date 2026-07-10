@@ -49,3 +49,18 @@
    - configuration should be able to specify "users" by path prefixes
    - for each user or groups of users it should be possible to define rules which types of tunnels will be allowed
    - for mTLS it should relay on caddy's server socket
+[ ] Add HAProxy PROXY Protocol v1/v2 header injection support (`?proxy_protocol`)
+   - Prepend HAProxy PROXY Protocol v1 or v2 headers when connecting to backend target sockets if `?proxy_protocol` parameter is specified on forward tunnels.
+   - Ensure target backend services (SSH, Nginx, HAProxy) receive the true originating client IP and port.
+[ ] Add Reverse SOCKS5 and Reverse HTTP Proxy tunnel support (`-R socks5://...`, `-R http://...`)
+   - Implement reverse SOCKS5 proxy handler in `ReverseTunnelManager` so remote servers can route dynamic traffic through the client network.
+   - Implement reverse HTTP CONNECT proxy handler in `ReverseTunnelManager`.
+[ ] Add Linux Transparent Proxy support (`tproxy+tcp://`, `tproxy+udp://`)
+   - Implement netfilter transparent proxying listeners (`IP_TRANSPARENT` / `SO_MARK`) on Linux in `pkg/client/client.go`.
+   - Enable full system traffic interception with utilities like `cproxy` or iptables `TPROXY`.
+[ ] Add UDP tunnel inactivity timeout enforcement (`?timeout_sec=30`)
+   - Implement idle session expiration and automatic cleanup for UDP tunnel streams after `timeout_sec` of inactivity.
+[ ] Add automatic TLS Certificate hot-reloading
+   - Implement filesystem watching (`fsnotify`) on `--tls-certificate`, `--tls-private-key`, and `--tls-client-ca-certs` so certificates are automatically reloaded without restarting the server or client.
+[ ] Add ephemeral self-signed TLS certificate generation on startup
+   - Automatically generate an in-memory ephemeral self-signed RSA/EC certificate when starting a `wss://` server without explicit `--tls-certificate` and `--tls-private-key` flags.
