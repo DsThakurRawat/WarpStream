@@ -1,12 +1,16 @@
 package server
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -520,6 +524,12 @@ func (m *ReverseTunnelManager) handleIncoming(tl *tunnelListener, conn net.Conn)
 			slog.Warn("Reverse SOCKS5 handshake failed", "err", err)
 			return
 		}
+	} else if tl.protocol.ReverseHttpProxy != nil {
+		conn, targetHost, targetPort, err = m.handleHttpProxyHandshake(conn)
+		if err != nil {
+			slog.Warn("Reverse HTTP proxy handshake failed", "err", err)
+			return
+		}
 	}
 
 	// Get a waiting client connection
@@ -606,4 +616,48 @@ func (m *ReverseTunnelManager) handleSocks5Handshake(conn net.Conn) (string, uin
 	}
 
 	return host, port, nil
+}
+
+type prefixConn struct {
+	net.Conn
+	r io.Reader
+}
+
+func (p *prefixConn) Read(b []byte) (int, error) {
+	return p.r.Read(b)
+}
+
+func (m *ReverseTunnelManager) handleHttpProxyHandshake(conn net.Conn) (net.Conn, string, uint16, error) {
+	br := bufio.NewReader(conn)
+	req, err := http.ReadRequest(br)
+	if err != nil {
+		return conn, "", 0, fmt.Errorf("failed to read HTTP proxy request: %w", err)
+	}
+	if req.Method != http.MethodConnect {
+		resp := "HTTP/1.1 405 Method Not Allowed\r\n\r\n"
+		_, _ = conn.Write([]byte(resp))
+		return conn, "", 0, fmt.Errorf("unsupported HTTP proxy method: %s", req.Method)
+	}
+	host := req.URL.Hostname()
+	portStr := req.URL.Port()
+	if portStr == "" {
+		portStr = "80"
+	}
+	portVal, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return conn, "", 0, fmt.Errorf("invalid port in CONNECT request: %s", portStr)
+	}
+	_, err = conn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	if err != nil {
+		return conn, "", 0, err
+	}
+	var wrapped net.Conn = conn
+	if br.Buffered() > 0 {
+		leftover, _ := br.Peek(br.Buffered())
+		wrapped = &prefixConn{
+			Conn: conn,
+			r:    io.MultiReader(bytes.NewReader(leftover), conn),
+		}
+	}
+	return wrapped, host, uint16(portVal), nil
 }

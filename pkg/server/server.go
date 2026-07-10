@@ -469,11 +469,11 @@ func (s *Server) handleConnection(wsConn *wst.Conn, claims *protocol.JwtTunnelCo
 	}
 
 	// Reverse Tunnel
-	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil {
+	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
 		s.rvMgr.HandleClient(wsConn, claims)
 		return
 	}
-	if claims.Protocol.ReverseUdp != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
+	if claims.Protocol.ReverseUdp != nil {
 		slog.Warn("Unsupported reverse protocol", "proto", claims.Protocol)
 		return
 	}
@@ -515,11 +515,11 @@ func (s *Server) handleGorillaConnection(wsConn *websocket.Conn, claims *protoco
 	}
 
 	// Reverse Tunnel
-	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil {
+	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
 		s.rvMgr.HandleGorillaClient(wsConn, claims)
 		return
 	}
-	if claims.Protocol.ReverseUdp != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
+	if claims.Protocol.ReverseUdp != nil {
 		slog.Warn("Unsupported reverse protocol (gorilla)", "proto", claims.Protocol)
 		return
 	}
@@ -572,11 +572,11 @@ func (s *Server) handleHttp2Connection(w http.ResponseWriter, r *http.Request, c
 	}
 
 	// Reverse Tunnel
-	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil {
+	if claims.Protocol.ReverseTcp != nil || claims.Protocol.ReverseUnix != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
 		s.rvMgr.HandleClientH2(rwc, claims)
 		return
 	}
-	if claims.Protocol.ReverseUdp != nil || claims.Protocol.ReverseSocks5 != nil || claims.Protocol.ReverseHttpProxy != nil {
+	if claims.Protocol.ReverseUdp != nil {
 		slog.Warn("Unsupported reverse protocol for HTTP/2", "proto", claims.Protocol)
 		_ = rwc.Close()
 		return

@@ -110,16 +110,34 @@ func TestParseTunnelArg(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:      "Reverse SOCKS5 unsupported",
+			name:      "Reverse SOCKS5",
 			arg:       "socks5://9090",
 			isReverse: true,
-			wantErr:   true,
+			want: &protocol.LocalToRemote{
+				Local:  "127.0.0.1:9090",
+				Remote: "0.0.0.0",
+				Port:   0,
+				Protocol: protocol.LocalProtocol{
+					ReverseSocks5: &protocol.ReverseSocks5Protocol{
+						Timeout: &protocol.Duration{Secs: 30},
+					},
+				},
+			},
 		},
 		{
-			name:      "Reverse HTTP proxy unsupported",
+			name:      "Reverse HTTP proxy",
 			arg:       "http://9090",
 			isReverse: true,
-			wantErr:   true,
+			want: &protocol.LocalToRemote{
+				Local:  "127.0.0.1:9090",
+				Remote: "0.0.0.0",
+				Port:   0,
+				Protocol: protocol.LocalProtocol{
+					ReverseHttpProxy: &protocol.ReverseHttpProxyProtocol{
+						Timeout: &protocol.Duration{Secs: 30},
+					},
+				},
+			},
 		},
 	}
 

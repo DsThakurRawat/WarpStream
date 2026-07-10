@@ -187,13 +187,13 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 		}
 	case "socks5":
 		if isReverse {
-			return nil, fmt.Errorf("reverse SOCKS5 tunnels are not implemented")
+			ltr.Protocol = protocol.LocalProtocol{ReverseSocks5: &protocol.ReverseSocks5Protocol{Timeout: getTimeout(), Credentials: getCredentials()}}
 		} else {
 			ltr.Protocol = protocol.LocalProtocol{Socks5: &protocol.Socks5Protocol{Timeout: getTimeout(), Credentials: getCredentials()}}
 		}
 	case "http":
 		if isReverse {
-			return nil, fmt.Errorf("reverse HTTP proxy tunnels are not implemented")
+			ltr.Protocol = protocol.LocalProtocol{ReverseHttpProxy: &protocol.ReverseHttpProxyProtocol{Timeout: getTimeout(), Credentials: getCredentials()}}
 		} else {
 			ltr.Protocol = protocol.LocalProtocol{HttpProxy: &protocol.HttpProxyProtocol{Timeout: getTimeout(), Credentials: getCredentials(), ProxyProtocol: getProxyProtocol()}}
 		}
