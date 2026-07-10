@@ -889,7 +889,13 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 
 	slog.Info("UDP Listener started", "local", ltr.Local, "remote", ltr.Remote, "port", ltr.Port)
 
+	timeoutDuration := 30 * time.Second
+	if ltr.Protocol.Udp != nil && ltr.Protocol.Udp.Timeout != nil && ltr.Protocol.Udp.Timeout.Secs > 0 {
+		timeoutDuration = time.Duration(ltr.Protocol.Udp.Timeout.Secs) * time.Second
+	}
+
 	clients := make(map[string]*tunnelStream)
+	timers := make(map[string]*time.Timer)
 	var mu sync.Mutex
 
 	buf := make([]byte, 64*1024)
@@ -911,10 +917,23 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 			}
 			clients[srcAddr.String()] = ts
 
+			timer := time.AfterFunc(timeoutDuration, func() {
+				mu.Lock()
+				delete(clients, srcAddr.String())
+				delete(timers, srcAddr.String())
+				mu.Unlock()
+				ts.Close()
+			})
+			timers[srcAddr.String()] = timer
+
 			go func(ts *tunnelStream, dest *net.UDPAddr) {
 				defer func() {
 					mu.Lock()
 					delete(clients, dest.String())
+					if t, found := timers[dest.String()]; found {
+						t.Stop()
+						delete(timers, dest.String())
+					}
 					mu.Unlock()
 					ts.Close()
 				}()
@@ -925,6 +944,11 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 						if err != nil {
 							return
 						}
+						mu.Lock()
+						if t, found := timers[dest.String()]; found {
+							t.Reset(timeoutDuration)
+						}
+						mu.Unlock()
 						if messageType == wst.BinaryMessage {
 							_, _ = conn.WriteToUDP(p, dest)
 						}
@@ -935,6 +959,11 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 						if err != nil {
 							return
 						}
+						mu.Lock()
+						if t, found := timers[dest.String()]; found {
+							t.Reset(timeoutDuration)
+						}
+						mu.Unlock()
 						if messageType == websocket.BinaryMessage {
 							_, _ = conn.WriteToUDP(p, dest)
 						}
@@ -944,6 +973,11 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 					for {
 						n, err := ts.h2.Read(buf)
 						if n > 0 {
+							mu.Lock()
+							if t, found := timers[dest.String()]; found {
+								t.Reset(timeoutDuration)
+							}
+							mu.Unlock()
 							_, _ = conn.WriteToUDP(buf[:n], dest)
 						}
 						if err != nil {
@@ -952,6 +986,10 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 					}
 				}
 			}(ts, srcAddr)
+		} else {
+			if t, found := timers[srcAddr.String()]; found {
+				t.Reset(timeoutDuration)
+			}
 		}
 		mu.Unlock()
 
@@ -967,6 +1005,10 @@ func (c *Client) runUdpTunnel(ltr *protocol.LocalToRemote) {
 			slog.Error("Failed to write to transport for UDP", "err", err)
 			mu.Lock()
 			delete(clients, srcAddr.String())
+			if t, found := timers[srcAddr.String()]; found {
+				t.Stop()
+				delete(timers, srcAddr.String())
+			}
 			mu.Unlock()
 			ts.Close()
 		}
