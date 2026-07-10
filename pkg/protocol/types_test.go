@@ -3,13 +3,14 @@ package protocol
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
 func TestCredentials_JSON(t *testing.T) {
 	c := Credentials{
 		Username: "admin",
-		Password: "password",
+		Password: "dummy_pass_for_test",
 	}
 
 	data, err := json.Marshal(c)
@@ -18,7 +19,7 @@ func TestCredentials_JSON(t *testing.T) {
 	}
 
 	// Should be an array of two strings
-	wantJSON := `["admin","password"]`
+	wantJSON := `["admin","dummy_pass_for_test"]`
 	if string(data) != wantJSON {
 		t.Errorf("Marshal() got = %s, want %s", string(data), wantJSON)
 	}
@@ -30,6 +31,44 @@ func TestCredentials_JSON(t *testing.T) {
 
 	if !reflect.DeepEqual(got, c) {
 		t.Errorf("Unmarshal() got = %+v, want %+v", got, c)
+	}
+}
+
+func TestCredentials_String(t *testing.T) {
+	tests := []struct {
+		name string
+		cred Credentials
+		want string
+	}{
+		{
+			name: "with password",
+			cred: Credentials{Username: "admin", Password: "dummy_pass_for_test"},
+			want: `Credentials{Username: "admin", Password: <redacted>}`,
+		},
+		{
+			name: "empty password",
+			cred: Credentials{Username: "admin", Password: ""},
+			want: `Credentials{Username: "admin"}`,
+		},
+		{
+			name: "empty username",
+			cred: Credentials{Username: "", Password: "secret"},
+			want: `Credentials{Username: "", Password: <redacted>}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.cred.String()
+			if got != tt.want {
+				t.Errorf("String() = %q, want %q", got, tt.want)
+			}
+
+			// Verify password is never in the output
+			if tt.cred.Password != "" && strings.Contains(got, tt.cred.Password) {
+				t.Errorf("String() contains password %q in output: %q", tt.cred.Password, got)
+			}
+		})
 	}
 }
 

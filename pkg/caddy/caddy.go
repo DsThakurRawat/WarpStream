@@ -7,7 +7,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/divyansh-rawat/warpstream/pkg/server"
+	"github.com/kad/warpstream/pkg/server"
 	"go.uber.org/zap"
 )
 
@@ -39,9 +39,9 @@ func (Warpstream) CaddyModule() caddy.ModuleInfo {
 func (w *Warpstream) Provision(ctx caddy.Context) error {
 	w.log = ctx.Logger()
 
-	// If no mode is specified, default to legacy for compatibility
+	// If no mode is specified, default to rust for compatibility
 	if w.Config.WebsocketProtocol == "" {
-		w.Config.WebsocketProtocol = "legacy"
+		w.Config.WebsocketProtocol = "rust"
 	}
 
 	w.server = server.NewServer(w.Config)
@@ -87,7 +87,7 @@ func (w *Warpstream) ServeHTTP(rw http.ResponseWriter, r *http.Request, next cad
 // UnmarshalCaddyfile sets up the handler from Caddyfile tokens.
 //
 //	warpstream {
-//	    mode ws|legacy
+//	    mode ws|rust
 //	    prefix /v1
 //	    restrict_config /path/to/rules.yaml
 //	    ping_interval 30s

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
+	"github.com/kad/warpstream/pkg/protocol"
 )
 
 func parseDurationSec(s string) (*protocol.Duration, error) {
@@ -101,7 +101,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 		if isReverse {
 			ltr.Protocol = protocol.LocalProtocol{ReverseUnix: &protocol.ReverseUnixProtocol{Path: localPath}}
 			// For reverse unix, format is usually unix://local_path:remote_path
-			// but warpstream (legacy) might have different ideas.
+			// but warpstream (rust) might have different ideas.
 			// In our case, we want the server to listen on remotePath and forward to localPath.
 			if remotePath != "" {
 				ltr.Remote = remotePath // This will be used as the listen path on the server
@@ -121,7 +121,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 
 	// Robust parsing of [bind:]port[:host:port]
 	// If it contains brackets, it has an IPv6 bind or host
-	// For simplicity and alignment with Legacy, let's look for the first protocol separator '://' (already handled)
+	// For simplicity and alignment with Rust, let's look for the first protocol separator '://' (already handled)
 	// then split the rest by ':' but being careful about IPv6 brackets.
 
 	var partsInfo []string

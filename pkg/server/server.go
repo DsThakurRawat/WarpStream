@@ -18,14 +18,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/divyansh-rawat/warpstream/internal/socket"
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
-	"github.com/divyansh-rawat/warpstream/pkg/tunnel"
-	"github.com/divyansh-rawat/warpstream/pkg/wst"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/kad/warpstream/internal/socket"
+	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/kad/warpstream/pkg/tunnel"
+	"github.com/kad/warpstream/pkg/wst"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 var insecureWSModeJWTWarning sync.Once
@@ -41,7 +40,7 @@ type Config struct {
 	DnsResolver                    []string      `yaml:"dns_resolver"`
 	DnsResolverPreferIpv4          bool          `yaml:"dns_resolver_prefer_ipv4"`
 	RestrictTo                     []string      `yaml:"restrict_to"`
-	RestrictHttpUpgradePathPrefix  []string      `yaml:"restrict_http_upgrade_path_prefix_list"` // Renamed list to avoid clash? No, Legacy uses same name but different structure.
+	RestrictHttpUpgradePathPrefix  []string      `yaml:"restrict_http_upgrade_path_prefix_list"` // Renamed list to avoid clash? No, Rust uses same name but different structure.
 	RestrictConfig                 string        `yaml:"restrict_config"`
 	TlsCertificate                 string        `yaml:"tls_certificate"`
 	TlsPrivateKey                  string        `yaml:"tls_private_key"`
@@ -50,7 +49,7 @@ type Config struct {
 	HttpProxyLogin                 string        `yaml:"http_proxy_login"`
 	HttpProxyPassword              string        `yaml:"http_proxy_password"`
 	RemoteToLocalServerIdleTimeout time.Duration `yaml:"remote_to_local_server_idle_timeout"`
-	WebsocketProtocol              string        `yaml:"mode"` // "legacy" or "ws"
+	WebsocketProtocol              string        `yaml:"mode"` // "rust" or "ws"
 }
 
 func (c *Config) UnmarshalYAML(unmarshal func(any) error) error {
@@ -234,11 +233,14 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	h2s := &http2.Server{}
-	handler := h2c.NewHandler(s.mux, h2s)
 	srv := &http.Server{
 		Addr:    bindAddr,
-		Handler: handler,
+		Handler: s.mux,
+	}
+
+	// Enable HTTP/2 support (including cleartext h2c)
+	if err := http2.ConfigureServer(srv, &http2.Server{}); err != nil {
+		return fmt.Errorf("failed to configure HTTP/2: %w", err)
 	}
 
 	if s.Config.TlsCertificate != "" && s.Config.TlsPrivateKey != "" {

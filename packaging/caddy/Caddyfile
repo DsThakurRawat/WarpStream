@@ -8,7 +8,7 @@ example.com {
     route /warpstream/* {
         warpstream {
             prefix /warpstream
-            mode legacy
+            mode rust
             ping_interval 30s
             idle_timeout 60s
             # mask_frame

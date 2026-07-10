@@ -10,9 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/divyansh-rawat/warpstream/internal/rlimit"
-	"github.com/divyansh-rawat/warpstream/pkg/client"
-	"github.com/divyansh-rawat/warpstream/pkg/server"
+	"github.com/kad/warpstream/internal/rlimit"
+	"github.com/kad/warpstream/pkg/client"
+	"github.com/kad/warpstream/pkg/server"
 )
 
 type FullConfig struct {
@@ -209,6 +209,11 @@ func main() {
 				Usage:   "Disable color output",
 				EnvVars: []string{"NO_COLOR"},
 			},
+			&cli.IntFlag{
+				Name:    "nb-worker-threads",
+				Usage:   "Number of worker threads",
+				EnvVars: []string{"TOKIO_WORKER_THREADS"},
+			},
 			&cli.StringFlag{
 				Name:    "log-lvl",
 				Value:   "INFO",
@@ -291,8 +296,8 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "legacy",
-						Usage:   "WebSocket protocol mode (legacy, ws)",
+						Value:   "rust",
+						Usage:   "WebSocket protocol mode (rust, ws)",
 						EnvVars: []string{"WARPSTREAM_MODE"},
 					},
 					&cli.StringFlag{
@@ -355,8 +360,8 @@ func main() {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "mode",
-						Value:   "legacy",
-						Usage:   "WebSocket protocol mode (legacy, ws)",
+						Value:   "rust",
+						Usage:   "WebSocket protocol mode (rust, ws)",
 						EnvVars: []string{"WARPSTREAM_MODE"},
 					},
 					&cli.StringFlag{

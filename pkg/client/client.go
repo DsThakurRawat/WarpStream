@@ -19,12 +19,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
-	"github.com/divyansh-rawat/warpstream/pkg/tunnel"
-	"github.com/divyansh-rawat/warpstream/pkg/wst"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/kad/warpstream/pkg/protocol"
+	"github.com/kad/warpstream/pkg/tunnel"
+	"github.com/kad/warpstream/pkg/wst"
 	"golang.org/x/net/http2"
 )
 
@@ -54,7 +54,7 @@ type Config struct {
 	DnsResolverPreferIpv4                  bool              `yaml:"dns_resolver_prefer_ipv4"`
 	LocalToRemote                          []string          `yaml:"local_to_remote"`
 	RemoteToLocal                          []string          `yaml:"remote_to_local"`
-	WebsocketProtocol                      string            `yaml:"mode"` // "legacy" or "ws"
+	WebsocketProtocol                      string            `yaml:"mode"` // "rust" or "ws"
 }
 
 type Client struct {
@@ -86,7 +86,7 @@ func (c *Client) generateJWT(requestID string, p protocol.LocalProtocol, remoteH
 	if secret == "" {
 		secret = legacyJWTSecret
 		legacyJWTSecretWarning.Do(func() {
-			slog.Warn("Using legacy default JWT secret for Legacy compatibility; configure jwt_secret for secure deployments")
+			slog.Warn("Using legacy default JWT secret for Rust compatibility; configure jwt_secret for secure deployments")
 		})
 	}
 
@@ -602,11 +602,9 @@ func (c *Client) handleSocks5(conn net.Conn, credentials *protocol.Credentials) 
 		if _, err := io.ReadFull(conn, buf[:plen]); err != nil {
 			return "", 0, err
 		}
-		password := string(buf[:plen])
-
 		status := byte(0x00)
 		if !constantTimeEqualBytes([]byte(username), []byte(credentials.Username)) ||
-			!constantTimeEqualBytes([]byte(password), []byte(credentials.Password)) {
+			!constantTimeEqualBytes(buf[:plen], []byte(credentials.Password)) {
 			status = 0x01
 		}
 		if _, err := conn.Write([]byte{0x01, status}); err != nil {

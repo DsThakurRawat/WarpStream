@@ -20,6 +20,11 @@ test: ## Run tests
 	@echo "Running tests..."
 	go test -v -race ./...
 
+.PHONY: test-interop
+test-interop: build ## Run interoperability tests with original Rust warpstream
+	@echo "Running interoperability tests..."
+	go test -v ./tests/tester/...
+
 .PHONY: lint
 lint: ## Run linter
 	@echo "Running golangci-lint..."
@@ -55,7 +60,7 @@ verify: ## Run go mod verify
 .PHONY: build-caddy
 build-caddy: ## Build Caddy with warpstream module
 	@echo "Building Caddy with warpstream module..."
-	cd pkg/caddy && xcaddy build --with github.com/divyansh-rawat/warpstream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/divyansh-rawat/warpstream=$(CURDIR)
+	cd pkg/caddy && xcaddy build --with github.com/kad/warpstream/pkg/caddy=$(CURDIR)/pkg/caddy --with github.com/kad/warpstream=$(CURDIR)
 
 .PHONY: check-caddy
 check-caddy: build-caddy ## Check if Caddy module is correctly registered

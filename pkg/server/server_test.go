@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/divyansh-rawat/warpstream/pkg/protocol"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/kad/warpstream/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
 
@@ -118,9 +118,9 @@ func TestParseJWTClaimsRejectsWrongSecret(t *testing.T) {
 	}
 }
 
-func TestParseJWTClaimsLegacyModeIgnoresVerificationSecret(t *testing.T) {
+func TestParseJWTClaimsRustModeIgnoresVerificationSecret(t *testing.T) {
 	srv := NewServer(Config{
-		WebsocketProtocol: "legacy",
+		WebsocketProtocol: "rust",
 		JWTSecret:         "shared-secret",
 	})
 
@@ -161,7 +161,7 @@ func TestParseJWTClaimsCompatibilityModeAcceptsHS256Shape(t *testing.T) {
 
 func TestParseJWTClaimsRejectsUnsupportedAlgorithmWithoutPanicking(t *testing.T) {
 	t.Run("unverified", func(t *testing.T) {
-		srv := NewServer(Config{WebsocketProtocol: "legacy"})
+		srv := NewServer(Config{WebsocketProtocol: "rust"})
 
 		defer func() {
 			if r := recover(); r != nil {

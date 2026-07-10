@@ -5,8 +5,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/divyansh-rawat/warpstream/pkg/wst"
 	"github.com/gorilla/websocket"
+	"github.com/kad/warpstream/pkg/wst"
 )
 
 // Pipe pipes data between a TCP connection and a WebSocket connection.
