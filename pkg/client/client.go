@@ -120,6 +120,14 @@ func (c *Client) loadHttpHeaders() map[string]string {
 	return headers
 }
 
+func eventsPath(prefix string) string {
+	prefix = strings.Trim(prefix, "/")
+	if prefix == "" {
+		return "/events"
+	}
+	return "/" + prefix + "/events"
+}
+
 func (c *Client) connectToWarpstream(p protocol.LocalProtocol, remoteHost string, remotePort uint16) (*wst.Conn, *http.Response, error) {
 	requestID := uuid.New().String()
 	token, err := c.generateJWT(requestID, p, remoteHost, remotePort)
@@ -143,7 +151,7 @@ func (c *Client) connectToWarpstream(p protocol.LocalProtocol, remoteHost string
 	if u.Scheme == "wss" || u.Scheme == "https" {
 		u.Scheme = "ws"
 	}
-	u.Path = fmt.Sprintf("/%s/events", c.Config.PathPrefix)
+	u.Path = eventsPath(c.Config.PathPrefix)
 
 	header := http.Header{}
 	header.Set("Sec-WebSocket-Protocol", fmt.Sprintf("v1, %s%s", protocol.JwtHeaderPrefix, token))
@@ -208,7 +216,7 @@ func (c *Client) connectToHttp2(p protocol.LocalProtocol, remoteHost string, rem
 	case "wss":
 		u.Scheme = "https"
 	}
-	u.Path = fmt.Sprintf("/%s/events", c.Config.PathPrefix)
+	u.Path = eventsPath(c.Config.PathPrefix)
 
 	pr, pw := io.Pipe()
 	req, err := http.NewRequest("POST", u.String(), pr)
@@ -315,7 +323,7 @@ func (c *Client) connectToGorilla(p protocol.LocalProtocol, remoteHost string, r
 	case "wss", "https":
 		u.Scheme = "wss"
 	}
-	u.Path = fmt.Sprintf("/%s/events", c.Config.PathPrefix)
+	u.Path = eventsPath(c.Config.PathPrefix)
 
 	header := http.Header{}
 	// For RFC compliant mode, we might want to use standard headers or follow same JWT pattern
@@ -808,12 +816,21 @@ func (c *Client) StartReverseTunnel(ltr *protocol.LocalToRemote) {
 		}
 		delay = 1 * time.Second
 
-		// Check for target in cookies (for dynamic reverse tunnels)
 		targetHost := ltr.Remote
 		targetPort := ltr.Port
 		targetProto := ltr.Protocol
 
-		if ts.r.Header.Get("Set-Cookie") != "" {
+		if ltr.Protocol.ReverseSocks5 != nil || ltr.Protocol.ReverseHttpProxy != nil {
+			dynHost, dynPort, err := readTargetFrame(ts)
+			if err != nil {
+				slog.Error("Reverse tunnel: failed to read target frame", "err", err)
+				ts.Close()
+				time.Sleep(delay)
+				continue
+			}
+			targetHost = dynHost
+			targetPort = dynPort
+		} else if ts.r != nil && ts.r.Header.Get("Set-Cookie") != "" {
 			cookieStr := ts.r.Header.Get("Set-Cookie")
 			claims := &protocol.JwtTunnelConfig{}
 			_, _, err := jwt.NewParser().ParseUnverified(cookieStr, claims)
@@ -849,6 +866,53 @@ func (c *Client) StartReverseTunnel(ltr *protocol.LocalToRemote) {
 		c.startPipe(localConn, ts)
 		slog.Info("Reverse tunnel closed")
 	}
+}
+
+func readTargetFrame(ts *tunnelStream) (string, uint16, error) {
+	var payload []byte
+	if ts.ws != nil {
+		_, data, err := ts.ws.ReadMessage()
+		if err != nil {
+			return "", 0, err
+		}
+		payload = data
+	} else if ts.gorilla != nil {
+		_, data, err := ts.gorilla.ReadMessage()
+		if err != nil {
+			return "", 0, err
+		}
+		payload = data
+	} else if ts.h2 != nil {
+		hdr := make([]byte, 2)
+		if _, err := io.ReadFull(ts.h2, hdr); err != nil {
+			return "", 0, err
+		}
+		if hdr[0] != 0x01 {
+			return "", 0, fmt.Errorf("invalid target frame version: %d", hdr[0])
+		}
+		hostLen := int(hdr[1])
+		rest := make([]byte, hostLen+2)
+		if _, err := io.ReadFull(ts.h2, rest); err != nil {
+			return "", 0, err
+		}
+		payload = append(hdr, rest...)
+	} else {
+		return "", 0, fmt.Errorf("no active stream")
+	}
+
+	if len(payload) < 4 {
+		return "", 0, fmt.Errorf("target frame too short")
+	}
+	if payload[0] != 0x01 {
+		return "", 0, fmt.Errorf("invalid target frame version: %d", payload[0])
+	}
+	hostLen := int(payload[1])
+	if len(payload) < 2+hostLen+2 {
+		return "", 0, fmt.Errorf("target frame truncated")
+	}
+	host := string(payload[2 : 2+hostLen])
+	port := binary.BigEndian.Uint16(payload[2+hostLen : 2+hostLen+2])
+	return host, port, nil
 }
 
 func (c *Client) runTcpTunnel(ltr *protocol.LocalToRemote) {
