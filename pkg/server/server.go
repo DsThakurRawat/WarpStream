@@ -73,10 +73,18 @@ func (c *Config) UnmarshalYAML(unmarshal func(any) error) error {
 }
 
 type Server struct {
-	Config Config
-	mux    *http.ServeMux
-	rvMgr  *ReverseTunnelManager
-	rules  *RestrictionsRules
+	Config   Config
+	mux      *http.ServeMux
+	rvMgr    *ReverseTunnelManager
+	rules    *RestrictionsRules
+	reloader *CertReloader
+}
+
+func (s *Server) ReloadCertificate() error {
+	if s.reloader == nil {
+		return fmt.Errorf("no certificate reloader configured on server")
+	}
+	return s.reloader.Reload()
 }
 
 func NewServer(config Config) *Server {
@@ -265,7 +273,9 @@ func (s *Server) Start() error {
 			if err != nil {
 				return fmt.Errorf("failed to load TLS certificates: %w", err)
 			}
+			s.reloader = reloader
 			reloader.WatchSignals()
+			reloader.WatchFiles(5 * time.Second)
 			tlsConfig.GetCertificate = reloader.GetCertificate
 			srv.TLSConfig = tlsConfig
 			return srv.ServeTLS(ln, "", "")
