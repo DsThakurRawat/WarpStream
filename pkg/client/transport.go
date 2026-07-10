@@ -21,11 +21,15 @@ func (c *Client) tlsClientConfig(serverName string) (*tls.Config, error) {
 		tlsConfig.ServerName = c.Config.TlsSniOverride
 	}
 	if c.Config.TlsClientCert != "" && c.Config.TlsClientKey != "" {
-		cert, err := tls.LoadX509KeyPair(c.Config.TlsClientCert, c.Config.TlsClientKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load client cert: %w", err)
+		if c.certReloader != nil {
+			tlsConfig.GetClientCertificate = c.certReloader.getClientCertificate
+		} else {
+			cert, err := tls.LoadX509KeyPair(c.Config.TlsClientCert, c.Config.TlsClientKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load client cert: %w", err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	return tlsConfig, nil
