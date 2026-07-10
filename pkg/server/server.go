@@ -410,10 +410,20 @@ func shouldWriteProxyHeader(claims *protocol.JwtTunnelConfig) bool {
 	return false
 }
 
+func udpTimeoutDuration(claims *protocol.JwtTunnelConfig) time.Duration {
+	if claims != nil && claims.Protocol.Udp != nil && claims.Protocol.Udp.Timeout != nil && claims.Protocol.Udp.Timeout.Secs > 0 {
+		return time.Duration(claims.Protocol.Udp.Timeout.Secs) * time.Second
+	}
+	return 30 * time.Second
+}
+
 func (s *Server) dialTargetAndMaybeProxyHeader(claims *protocol.JwtTunnelConfig, network, targetAddr string, srcAddr net.Addr) (net.Conn, error) {
 	conn, err := net.DialTimeout(network, targetAddr, 10*time.Second)
 	if err != nil {
 		return nil, err
+	}
+	if network == "udp" {
+		conn = tunnel.NewIdleTimeoutNetConn(conn, udpTimeoutDuration(claims))
 	}
 	if network == "tcp" && shouldWriteProxyHeader(claims) {
 		if err := tunnel.WriteProxyHeaderV2(conn, srcAddr, conn.RemoteAddr()); err != nil {
