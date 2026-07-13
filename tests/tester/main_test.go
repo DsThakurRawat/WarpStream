@@ -30,12 +30,12 @@ const (
 	goBinary = "../../bin/warpstream"
 )
 
-type WarpstreamProcess struct {
+type WarpStreamProcess struct {
 	cmd    *exec.Cmd
 	cancel context.CancelFunc
 }
 
-func (p *WarpstreamProcess) Stop() {
+func (p *WarpStreamProcess) Stop() {
 	if p.cancel != nil {
 		p.cancel()
 	}
@@ -99,7 +99,7 @@ func waitForUnixSocket(path string, timeout time.Duration) error {
 	return fmt.Errorf("timeout waiting for unix socket %s", path)
 }
 
-func startProcess(name string, binary string, args []string, env []string) (*WarpstreamProcess, error) {
+func startProcess(name string, binary string, args []string, env []string) (*WarpStreamProcess, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, binary, args...)
 	if env != nil {
@@ -117,7 +117,7 @@ func startProcess(name string, binary string, args []string, env []string) (*War
 		return nil, err
 	}
 
-	return &WarpstreamProcess{cmd: cmd, cancel: cancel}, nil
+	return &WarpStreamProcess{cmd: cmd, cancel: cancel}, nil
 }
 
 func runEchoServer(port int) (chan struct{}, error) {
@@ -479,7 +479,7 @@ func TestInteroperability(t *testing.T) {
 			udpEchoDone, _ := runUDPEchoServer(targetPort)
 			defer func() { _ = udpEchoDone }()
 
-			// Start Warpstream Server
+			// Start WarpStream Server
 			serverAddr := net.JoinHostPort(host, fmt.Sprintf("%d", serverPort))
 			serverURL := ""
 			switch tc.transport {
@@ -534,7 +534,7 @@ func TestInteroperability(t *testing.T) {
 				t.Fatalf("Server failed to start: %v", err)
 			}
 
-			// Start Warpstream Client
+			// Start WarpStream Client
 			var clientArgs []string
 			// Use RFC 2732 brackets for IPv6 in tunnel arguments
 			tcpL := fmt.Sprintf("tcp://%s:127.0.0.1:%d", net.JoinHostPort(host, fmt.Sprintf("%d", tcpPort)), targetPort)

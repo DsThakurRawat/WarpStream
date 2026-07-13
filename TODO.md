@@ -45,7 +45,7 @@
    - client should not exit if connection to server got broken, it should try to
      reconnect
 [x] Caddy integration (server):
-   - consider example implementation of caddy app plugin that can be built into caddy server to allow serving warpstreams.
+   - consider example implementation of caddy app plugin that can be built into caddy server to allow serving warpstream tunnels.
    - configuration should be able to specify "users" by path prefixes
    - for each user or groups of users it should be possible to define rules which types of tunnels will be allowed
    - for mTLS it should relay on caddy's server socket

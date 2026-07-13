@@ -12,11 +12,11 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Warpstream{})
+	caddy.RegisterModule(WarpStream{})
 }
 
-// Warpstream is a Caddy module that allows serving warpstreams.
-type Warpstream struct {
+// WarpStream is a Caddy module that allows serving warpstream endpoints.
+type WarpStream struct {
 	// The configuration for the warpstream server.
 	Config server.Config `json:"config,omitempty"`
 
@@ -28,15 +28,15 @@ type Warpstream struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (Warpstream) CaddyModule() caddy.ModuleInfo {
+func (WarpStream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.warpstream",
-		New: func() caddy.Module { return new(Warpstream) },
+		New: func() caddy.Module { return new(WarpStream) },
 	}
 }
 
 // Provision sets up the module.
-func (w *Warpstream) Provision(ctx caddy.Context) error {
+func (w *WarpStream) Provision(ctx caddy.Context) error {
 	w.log = ctx.Logger()
 
 	// If no mode is specified, default to rust for compatibility
@@ -59,7 +59,7 @@ func (w *Warpstream) Provision(ctx caddy.Context) error {
 }
 
 // ServeHTTP implements caddyhttp.Handler.
-func (w *Warpstream) ServeHTTP(rw http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+func (w *WarpStream) ServeHTTP(rw http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	// warpstream server handles path prefix checking if configured.
 
 	// We want to detect if this is potentially a warpstream request.
@@ -87,7 +87,7 @@ func (w *Warpstream) ServeHTTP(rw http.ResponseWriter, r *http.Request, next cad
 // UnmarshalCaddyfile sets up the handler from Caddyfile tokens.
 //
 //	warpstream {
-//	    mode ws|rust
+//	    mode ws
 //	    prefix /v1
 //	    restrict_config /path/to/rules.yaml
 //	    ping_interval 30s
@@ -95,7 +95,7 @@ func (w *Warpstream) ServeHTTP(rw http.ResponseWriter, r *http.Request, next cad
 //	    mask_frame
 //	    restrict_to host:port ...
 //	}
-func (w *Warpstream) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (w *WarpStream) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for d.NextBlock(0) {
 			switch d.Val() {
@@ -146,7 +146,7 @@ func (w *Warpstream) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // Interface guards
 var (
-	_ caddy.Provisioner           = (*Warpstream)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Warpstream)(nil)
-	_ caddyfile.Unmarshaler       = (*Warpstream)(nil)
+	_ caddy.Provisioner           = (*WarpStream)(nil)
+	_ caddyhttp.MiddlewareHandler = (*WarpStream)(nil)
+	_ caddyfile.Unmarshaler       = (*WarpStream)(nil)
 )

@@ -3,14 +3,14 @@
 # define how to build, package, and release Go projects.
 
 version: 2
-project_name: wstunnel-go
+project_name: warpstream
 
 git:
   ignore_tags:
     - "pkg/caddy/*"
 
 builds:
-  - main: ./cmd/wstunnel-go
+  - main: ./cmd/warpstream
     env:
       - CGO_ENABLED=0
     goos:
@@ -39,22 +39,22 @@ archives:
       - packaging/caddy/Caddyfile
 
 nfpms:
-  - id: wstunnel-go
-    package_name: wstunnel-go
-    vendor: "kad"
-    homepage: "https://github.com/kad/wstunnel-go"
-    maintainer: "Alexander D. Kanevskiy <kad@kad.name>"
-    description: "A Go client/server for wstunnel"
+  - id: warpstream
+    package_name: warpstream
+    vendor: "DsThakurRawat"
+    homepage: "https://github.com/DsThakurRawat/WarpStream"
+    maintainer: "DsThakurRawat"
+    description: "A Go client/server for warpstream"
     license: "MIT"
     formats:
       - deb
       - rpm
       - apk
     contents:
-      - src: ./packaging/systemd/wstunnel-go-client@.service
-        dst: /usr/lib/systemd/system/wstunnel-go-client@.service
-      - src: ./packaging/systemd/wstunnel-go-server@.service
-        dst: /usr/lib/systemd/system/wstunnel-go-server@.service
+      - src: ./packaging/systemd/warpstream-client@.service
+        dst: /usr/lib/systemd/system/warpstream-client@.service
+      - src: ./packaging/systemd/warpstream-server@.service
+        dst: /usr/lib/systemd/system/warpstream-server@.service
 
 checksum:
   name_template: 'checksums.txt'

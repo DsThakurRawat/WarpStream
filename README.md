@@ -188,7 +188,7 @@ example.com {
     route /warpstream/* {
         warpstream {
             prefix /warpstream
-            mode rust
+            mode ws
             # restrict_config /etc/warpstream/rules.yaml
         }
     }
@@ -217,7 +217,7 @@ Configure by flags, environment, or a YAML file (`--config`).
 <summary><b>Client flags</b></summary>
 
 - `-L, --local-to-remote`, `-R, --remote-to-local` — define tunnels.
-- `--mode` — `rust` (default) or `ws` (strict RFC 6455).
+- `--mode` — default or `ws` (strict RFC 6455).
 - `--http-upgrade-path-prefix` — upgrade path prefix (default `v1`).
 - `--jwt-secret` — secret used to sign tunnel JWTs.
 - `--http-upgrade-credentials`, `-H, --header`, `--http-headers-file` — customize the upgrade request.
@@ -234,9 +234,9 @@ Configure by flags, environment, or a YAML file (`--config`).
 <details>
 <summary><b>Server flags</b></summary>
 
-- `--mode` — `rust` (default) or `ws`.
+- `--mode` — default or `ws`.
 - `--restrict-to`, `-r, --restrict-http-upgrade-path-prefix`, `--restrict-config` — access policy.
-- `--jwt-secret` — verifies tunnel JWT signatures under `--mode ws`. Under `--mode rust`, tokens are parsed Rust-style and not cryptographically verified.
+- `--jwt-secret` — verifies tunnel JWT signatures under `--mode ws`. In default mode, tokens are parsed without cryptographic verification.
 - `--insecure-no-jwt-validation` — accept unverified HS256 tokens even in `--mode ws`.
 - `--tls` — serve TLS; generate an ephemeral self-signed cert if none is supplied.
 - `--tls-certificate`, `--tls-private-key` — server cert/key (hot-reloaded on change or `SIGHUP`).
@@ -289,7 +289,7 @@ func main() {
 
 ## Compatibility and status
 
-WarpStream implements the wstunnel wire protocol, so it interoperates with existing wstunnel deployments for all forward tunnels and static reverse (TCP/Unix) tunnels. Dynamic reverse tunnels are a Go-native extension and stay within the WarpStream client/server pair.
+WarpStream implements a flexible wire protocol for forward tunnels and static reverse (TCP/Unix) tunnels. Dynamic reverse tunnels are a Go-native extension and stay within the WarpStream client/server pair.
 
 | Capability | Status | Cross-implementation |
 | :--- | :---: | :---: |

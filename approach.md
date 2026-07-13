@@ -1,7 +1,6 @@
-# Implementation Approach — Closing the wstunnel Feature Gap
+# Implementation Approach — Closing the Feature Gap
 
-This document is the work order for finishing feature parity with
-[erebe/wstunnel](https://github.com/erebe/wstunnel). It covers the six remaining
+This document is the work order for finishing feature parity across tunnel protocols. It covers the six remaining
 `[ ]` items in `TODO.md` plus an examples/tests pass. **Every task below is an
 implementation task — write working code and prove it with tests, not prose.**
 Each task is self-contained: goal, exact files/line anchors, step-by-step plan,
@@ -139,7 +138,7 @@ bytes, so the backend (SSH/nginx/HAProxy) sees the real source.
 ### Optional fidelity upgrade (do only if cheap)
 Carry the client's local-listener peer address to the server. The cleanest
 non-breaking route: the client sets a custom header
-(`X-Warpstream-Src: ip:port`) in `connectToWarpstream`/`connectToHttp2`/
+(`X-WarpStream-Src: ip:port`) in `connectToWarpStream`/`connectToHttp2`/
 `connectToGorilla` when `ProxyProtocol` is set, and the server prefers it over
 `RemoteAddr()`. Gate behind the same flag so default tunnels are untouched.
 

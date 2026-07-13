@@ -101,7 +101,7 @@ func ParseTunnelArg(arg string, isReverse bool) (*protocol.LocalToRemote, error)
 		if isReverse {
 			ltr.Protocol = protocol.LocalProtocol{ReverseUnix: &protocol.ReverseUnixProtocol{Path: localPath}}
 			// For reverse unix, format is usually unix://local_path:remote_path
-			// but warpstream (rust) might have different ideas.
+			// different implementations may handle this differently.
 			// In our case, we want the server to listen on remotePath and forward to localPath.
 			if remotePath != "" {
 				ltr.Remote = remotePath // This will be used as the listen path on the server

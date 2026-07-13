@@ -235,7 +235,7 @@ func eventsPath(prefix string) string {
 	return "/" + prefix + "/events"
 }
 
-func (c *Client) connectToWarpstream(p protocol.LocalProtocol, remoteHost string, remotePort uint16) (*wst.Conn, *http.Response, error) {
+func (c *Client) connectToWarpStream(p protocol.LocalProtocol, remoteHost string, remotePort uint16) (*wst.Conn, *http.Response, error) {
 	requestID := uuid.New().String()
 	token, err := c.generateJWT(requestID, p, remoteHost, remotePort)
 	if err != nil {
@@ -491,7 +491,7 @@ func (c *Client) connectToTransport(p protocol.LocalProtocol, remoteHost string,
 		return &tunnelStream{gorilla: ws, r: resp, err: err}
 	}
 
-	ws, resp, err := c.connectToWarpstream(p, remoteHost, remotePort)
+	ws, resp, err := c.connectToWarpStream(p, remoteHost, remotePort)
 	return &tunnelStream{ws: ws, r: resp, err: err}
 }
 

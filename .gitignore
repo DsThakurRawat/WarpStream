@@ -10,7 +10,7 @@
 
 bin/
 dist/
-/wstunnel-go
+/warpstream
 pkg/caddy/caddy
 
 # Test binary, built with `go test -c`

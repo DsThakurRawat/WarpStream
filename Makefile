@@ -21,7 +21,7 @@ test: ## Run tests
 	go test -v -race ./...
 
 .PHONY: test-interop
-test-interop: build ## Run interoperability tests with original Rust warpstream
+test-interop: build ## Run interoperability tests
 	@echo "Running interoperability tests..."
 	go test -v ./tests/tester/...
 

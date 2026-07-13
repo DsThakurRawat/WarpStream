@@ -1,4 +1,4 @@
-# warpstream Protocol Technical Specification
+# WarpStream Protocol Technical Specification
 
 ## Overview
 `warpstream` is a tunneling protocol designed to encapsulate arbitrary layered-4 traffic (TCP, UDP, SOCKS5, HTTP Proxy, Unix Sockets) within a WebSocket or HTTP/2 transport stream. Its primary purpose is to bypass restrictive firewalls and Deep Packet Inspection (DPI) systems by making the tunneled traffic appear as standard web traffic.
@@ -56,7 +56,7 @@ RFC 6455 Section 5.1 requires that all frames sent from a client to a server mus
 1.  **Client Dial:** Performs a TCP/TLS connection to the server.
 2.  **Handshake:** Sends a `GET` request with `Upgrade: websocket` and the `Sec-WebSocket-Protocol` containing the JWT.
 3.  **Server Upgrade:** In `--mode ws`, validates the JWT when a shared secret is configured and otherwise parses an `HS256`-shaped token for compatibility. In `--mode rust`, it parses an `HS256`-shaped token without signature verification to remain wire-compatible with the Rust implementation, then responds with `HTTP/1.1 101 Switching Protocols`.
-4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `warpstream::tunnel::transport::io` (Rust) logic.
+4.  **Piping:** Both sides enter a loop using the `pkg/tunnel` (Go) or `warpstream tunnel transport logic.
 
 ### Security Considerations
 - **JWT Secrets:** The implementation supports a shared secret (`--jwt-secret`) for signing client tunnel requests and for verifying server-side tunnel JWTs in `--mode ws`.
